@@ -48,6 +48,10 @@ kbd{font:inherit;font-size:11px;border:1px solid var(--line);border-radius:5px;p
 .hard-btn.active{background:#fff1cc;border-color:#e7bd58;color:#795600}
 .quiz{display:none}.quiz.active{display:block}.quiz-prompt{font-size:clamp(24px,6vw,34px);font-weight:750;line-height:1.4;margin:20px 0;overflow-wrap:anywhere}.quiz-example{font-size:17px;line-height:1.8;background:#f8f9f6;border-radius:14px;padding:16px;margin:16px 0;overflow-wrap:anywhere}.quiz-input{width:100%;border:1px solid var(--line);border-radius:12px;padding:13px;font-size:18px;margin-bottom:10px}.quiz-feedback{min-height:26px;margin:12px 0;font-weight:650}.quiz-feedback.good{color:#287447}.quiz-feedback.bad{color:#b23b32}
 footer{font-size:12px;color:var(--muted);line-height:1.6;text-align:center;padding:12px 8px}
+
+.auth-panel{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.auth-copy{flex:1;min-width:180px}.auth-copy strong{display:block;font-size:15px}.auth-copy span{display:block;font-size:13px;color:var(--muted);line-height:1.5;margin-top:5px}
+.auth-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.auth-status{font-size:12px;color:var(--muted);margin-top:8px;min-height:18px}
 @media(max-width:520px){.app{padding:17px 13px calc(24px + env(safe-area-inset-bottom))}header{align-items:flex-start;margin-bottom:20px}.logo{width:38px;height:38px}.brand{gap:9px}h1{font-size:20px}.top-actions button{padding:9px 10px;font-size:12px}.panel{padding:16px;border-radius:17px}.settings{grid-template-columns:1fr 1fr;gap:10px}.flashcard{min-height:280px;padding:24px 17px}.card-example{font-size:15px}.controls button{padding:10px 8px;font-size:13px}}
 </style>
 </head>
@@ -60,6 +64,20 @@ footer{font-size:12px;color:var(--muted);line-height:1.6;text-align:center;paddi
     <button id="clearBtn" title="清空单词库">清空</button>
   </div>
 </header>
+
+<section class="panel" id="authPanel">
+  <div class="auth-panel">
+    <div class="auth-copy">
+      <strong id="authTitle">跨设备同步</strong>
+      <span id="authDescription">使用 Google 登录后，可在 Mac 和 iPhone 间同步单词本。</span>
+    </div>
+    <div class="auth-actions">
+      <button class="primary" id="googleLoginBtn" type="button">使用 Google 登录</button>
+      <button id="googleLogoutBtn" type="button" style="display:none">退出登录</button>
+    </div>
+  </div>
+  <div class="auth-status" id="cloudStatus" role="status">云同步尚未连接。</div>
+</section>
 
 <section class="panel" id="setupPanel">
   <div class="panel-title">单词库</div>
@@ -118,10 +136,13 @@ footer{font-size:12px;color:var(--muted);line-height:1.6;text-align:center;paddi
   <div class="controls"><button id="checkAnswerBtn" class="primary">检查答案</button><button id="nextQuizBtn" disabled>下一题 →</button></div>
 </section>
 <div class="empty" id="emptyState">导入你的德语单词表，然后选择每次学习的数量。<br>每轮随机抽取；标记为难词后会更频繁出现。</div>
-<footer>免费 · 无账号 · 数据仅保存在本设备的浏览器中<br>重要单词请定期点击「导出备份」。</footer>
+<footer>免费使用 · 可在本设备保存，也可登录 Google 启用云同步。<br>重要单词请定期点击「导出备份」。</footer>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+const SUPABASE_URL = "https://ujutalqmamtiyyacjwxi.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_3nk1UZrjQruLifDwauhKDw_dIKU-KPN";
 const STORAGE_KEY = "minimalGermanFlashcards.v1";
 const MASTERED_KEY = "minimalGermanFlashcards.mastered.v1";
 const BOOKS_KEY = "minimalGermanFlashcards.books.v1";
@@ -137,6 +158,196 @@ let quizIndex = 0;
 let quizChecked = false;
 
 const $ = id => document.getElementById(id);
+
+let supabaseClient = null;
+let currentUser = null;
+let cloudReady = false;
+let cloudSaveTimer = null;
+let cloudOperation = Promise.resolve();
+
+function setCloudStatus(message, isError=false) {
+  const el = $("cloudStatus");
+  if (!el) return;
+  el.textContent = message;
+  el.style.color = isError ? "#b23b32" : "";
+}
+function setAuthUI(user) {
+  currentUser = user || null;
+  $("googleLoginBtn").style.display = currentUser ? "none" : "";
+  $("googleLogoutBtn").style.display = currentUser ? "" : "none";
+  $("authTitle").textContent = currentUser ? `已登录：${currentUser.email || "Google 用户"}` : "跨设备同步";
+  $("authDescription").textContent = currentUser
+    ? "当前账号已连接。请在其他设备使用同一个 Google 账号登录。"
+    : "使用 Google 登录后，可在 Mac 和 iPhone 间同步单词本。";
+}
+function localBooksSnapshot() {
+  const snapshot = {};
+  for (const [name, book] of Object.entries(books || {})) {
+    snapshot[name] = {
+      deck: Array.isArray(book?.deck) ? book.deck : [],
+      mastered: Array.isArray(book?.mastered) ? book.mastered : []
+    };
+  }
+  if (!Object.keys(snapshot).length) snapshot["默认单词本"] = {deck: [], mastered: []};
+  snapshot[activeBook] = {deck, mastered};
+  return snapshot;
+}
+function applyBooksSnapshot(snapshot) {
+  const clean = {};
+  if (snapshot && typeof snapshot === "object" && !Array.isArray(snapshot)) {
+    for (const [name, book] of Object.entries(snapshot)) {
+      if (!name || !book || typeof book !== "object") continue;
+      clean[name] = {
+        deck: Array.isArray(book.deck) ? book.deck : [],
+        mastered: Array.isArray(book.mastered) ? book.mastered : []
+      };
+    }
+  }
+  books = Object.keys(clean).length ? clean : {"默认单词本": {deck: [], mastered: []}};
+  activeBook = Object.keys(books)[0];
+  deck = books[activeBook].deck;
+  mastered = books[activeBook].mastered;
+  localStorage.setItem(BOOKS_KEY, JSON.stringify(books));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(deck));
+  localStorage.setItem(MASTERED_KEY, JSON.stringify(mastered));
+  updateDeckInfo();
+}
+function saveCloudNow() {
+  if (!supabaseClient || !currentUser || !cloudReady) return Promise.resolve();
+  const payload = {
+    user_id: currentUser.id,
+    data: {books: localBooksSnapshot(), activeBook},
+    updated_at: new Date().toISOString()
+  };
+  cloudOperation = cloudOperation.then(async () => {
+    const {error} = await supabaseClient.from("flashcard_data").upsert(payload, {onConflict: "user_id"});
+    if (error) throw error;
+    setCloudStatus("云端已同步 · " + new Date().toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"}));
+  }).catch(error => {
+    console.error("Cloud save failed:", error);
+    setCloudStatus("云端保存失败；本设备数据仍已保存。请检查网络后重试。", true);
+  });
+  return cloudOperation;
+}
+function scheduleCloudSave() {
+  if (!supabaseClient || !currentUser || !cloudReady) return;
+  clearTimeout(cloudSaveTimer);
+  setCloudStatus("有未同步的更改…");
+  cloudSaveTimer = setTimeout(() => { saveCloudNow(); }, 700);
+}
+async function syncAfterLogin(user) {
+  if (!supabaseClient || !user) return;
+  cloudReady = false;
+  setCloudStatus("正在读取云端单词本…");
+  try {
+    const {data: row, error} = await supabaseClient
+      .from("flashcard_data")
+      .select("data, updated_at")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (error) throw error;
+
+    const localSnapshot = localBooksSnapshot();
+    const localHasWords = Object.values(localSnapshot).some(b => b.deck.length || b.mastered.length);
+    const cloudBooks = row?.data?.books;
+    const cloudHasBooks = cloudBooks && typeof cloudBooks === "object" && Object.keys(cloudBooks).length > 0;
+    if (!row || !cloudHasBooks) {
+      // First login for this account: migrate this device's local books to the cloud.
+      const payload = {
+        user_id: user.id,
+        data: {books: localSnapshot, activeBook},
+        updated_at: new Date().toISOString()
+      };
+      const {error: saveError} = await supabaseClient.from("flashcard_data").upsert(payload, {onConflict:"user_id"});
+      if (saveError) throw saveError;
+      cloudReady = true;
+      setCloudStatus(localHasWords ? "首次登录：已将本设备的单词本上传到云端。" : "云端单词本已创建。可以导入单词或在其他设备登录。");
+      return;
+    }
+
+    const cloudSnapshot = JSON.stringify(cloudBooks);
+    const localSnapshotText = JSON.stringify(localSnapshot);
+    if (localHasWords && cloudSnapshot !== localSnapshotText) {
+      const useCloud = confirm("这个 Google 账号的云端已经有单词数据。\n\n点击“确定”：使用云端数据覆盖本设备当前单词本。\n点击“取消”：保留本设备数据，接下来会再询问是否上传本设备数据覆盖云端。");
+      if (useCloud) {
+        applyBooksSnapshot(cloudBooks);
+        activeBook = row.data.activeBook && books[row.data.activeBook] ? row.data.activeBook : Object.keys(books)[0];
+        deck = books[activeBook].deck;
+        mastered = books[activeBook].mastered;
+        updateDeckInfo();
+        localStorage.setItem(BOOKS_KEY, JSON.stringify(books));
+      } else {
+        const uploadLocal = confirm("确定要用本设备的单词本覆盖云端数据吗？\n\n如果选择“取消”，将暂不启用云同步，云端和本设备数据都不会被覆盖。");
+        if (!uploadLocal) {
+          setCloudStatus("已登录，但暂未同步。请先导出本地备份，再重新登录选择同步方向。", true);
+          return;
+        }
+        const {error: uploadError} = await supabaseClient.from("flashcard_data").upsert({
+          user_id: user.id, data: {books: localSnapshot, activeBook}, updated_at: new Date().toISOString()
+        }, {onConflict:"user_id"});
+        if (uploadError) throw uploadError;
+      }
+    } else {
+      applyBooksSnapshot(cloudBooks);
+      activeBook = row.data.activeBook && books[row.data.activeBook] ? row.data.activeBook : Object.keys(books)[0];
+      deck = books[activeBook].deck;
+      mastered = books[activeBook].mastered;
+      updateDeckInfo();
+      localStorage.setItem(BOOKS_KEY, JSON.stringify(books));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(deck));
+      localStorage.setItem(MASTERED_KEY, JSON.stringify(mastered));
+    }
+    cloudReady = true;
+    setCloudStatus("云端已连接 · 最近更新 " + (row.updated_at ? new Date(row.updated_at).toLocaleString() : "时间未知"));
+  } catch (error) {
+    console.error("Cloud sync failed:", error);
+    cloudReady = false;
+    setCloudStatus("云端同步失败：" + (error.message || "请检查数据库表和 RLS 配置。"), true);
+  }
+}
+async function initCloudAuth() {
+  if (!window.supabase?.createClient) {
+    setCloudStatus("Supabase 客户端加载失败。请检查网络后刷新页面。", true);
+    return;
+  }
+  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+  $("googleLoginBtn").addEventListener("click", async () => {
+    setCloudStatus("正在跳转到 Google 登录…");
+    const {error} = await supabaseClient.auth.signInWithOAuth({
+      provider: "google",
+      options: {redirectTo: window.location.href.split("#")[0]}
+    });
+    if (error) setCloudStatus("无法启动 Google 登录：" + error.message, true);
+  });
+  $("googleLogoutBtn").addEventListener("click", async () => {
+    const {error} = await supabaseClient.auth.signOut();
+    if (error) {
+      setCloudStatus("退出登录失败：" + error.message, true);
+      return;
+    }
+    cloudReady = false;
+    setAuthUI(null);
+    setCloudStatus("已退出登录。本设备的本地数据仍然保留。");
+  });
+  const {data, error} = await supabaseClient.auth.getSession();
+  if (error) {
+    setCloudStatus("读取登录状态失败：" + error.message, true);
+    return;
+  }
+  setAuthUI(data.session?.user || null);
+  if (data.session?.user) await syncAfterLogin(data.session.user);
+  else setCloudStatus("尚未登录。单词仍保存在本设备；登录后可启用云同步。");
+  supabaseClient.auth.onAuthStateChange((event, session) => {
+    if (event === "SIGNED_IN" && session?.user && session.user.id !== currentUser?.id) {
+      setAuthUI(session.user);
+      setTimeout(() => syncAfterLogin(session.user), 0);
+    } else if (event === "SIGNED_OUT") {
+      cloudReady = false;
+      setAuthUI(null);
+      setCloudStatus("已退出登录。本设备的本地数据仍然保留。");
+    }
+  });
+}
 function setStatus(message, isError=false) {
   $("importStatus").textContent = message;
   $("importStatus").style.color = isError ? "#b23b32" : "";
@@ -203,6 +414,7 @@ function saveDeck() {
     localStorage.setItem(MASTERED_KEY, JSON.stringify(mastered));
   } catch(e) { setStatus("保存失败：浏览器存储空间不足。请导出备份。", true); }
   updateDeckInfo();
+  scheduleCloudSave();
 }
 function updateBookSelect() {
   const select = $("bookSelect");
@@ -480,7 +692,7 @@ $("masteredBtn").addEventListener("click", () => {
 });
 $("exportBtn").addEventListener("click", exportBackup);
 $("clearBtn").addEventListener("click", () => {
-  if (confirm("确定清空当前单词本「${activeBook}」中的全部单词吗？其他单词本不会受影响。建议先导出备份。")) {
+  if (confirm(`确定清空当前单词本「${activeBook}」中的全部单词吗？其他单词本不会受影响。建议先导出备份。`)) {
     deck = []; mastered = []; session = []; quizSession = []; saveDeck(); setStatus(`「${activeBook}」已清空。`); $("emptyState").style.display = "block"; $("studyPanel").classList.remove("active"); $("quizPanel").classList.remove("active"); $("setupPanel").style.display = "";
   }
 });
@@ -496,10 +708,11 @@ deck = Array.isArray(books[activeBook].deck) ? books[activeBook].deck : [];
 mastered = Array.isArray(books[activeBook].mastered) ? books[activeBook].mastered : [];
 updateDeckInfo();
 $("bookSelect").addEventListener("change", e => switchBook(e.target.value));
-$("newBookBtn").addEventListener("click", () => { const name = prompt("新单词本名称："); if (!name || !name.trim()) return; const n = name.trim(); if (books[n]) { alert("这个单词本已经存在。"); return; } books[n] = {deck:[], mastered:[]}; books[activeBook] = {deck, mastered}; localStorage.setItem(BOOKS_KEY, JSON.stringify(books)); switchBook(n); setStatus(`已创建单词本「${n}」。`); });
-$("renameBookBtn").addEventListener("click", () => { const name = prompt("请输入新的单词本名称：", activeBook); if (!name || !name.trim() || name.trim() === activeBook) return; const n = name.trim(); if (books[n]) { alert("这个名称已经被使用。"); return; } books[n] = {deck, mastered}; delete books[activeBook]; activeBook = n; saveDeck(); updateBookSelect(); setStatus(`单词本已重命名为「${n}」。`); });
-$("deleteBookBtn").addEventListener("click", () => { if (Object.keys(books).length <= 1) { alert("至少保留一个单词本。"); return; } if (!confirm(`确定删除「${activeBook}」及其中的所有单词和学习状态吗？此操作无法撤销。`)) return; delete books[activeBook]; activeBook = Object.keys(books)[0]; deck = books[activeBook].deck || []; mastered = books[activeBook].mastered || []; localStorage.setItem(BOOKS_KEY, JSON.stringify(books)); updateDeckInfo(); setStatus(`已删除单词本，当前为「${activeBook}」。`); });
+$("newBookBtn").addEventListener("click", () => { const name = prompt("新单词本名称："); if (!name || !name.trim()) return; const n = name.trim(); if (books[n]) { alert("这个单词本已经存在。"); return; } books[n] = {deck:[], mastered:[]}; books[activeBook] = {deck, mastered}; localStorage.setItem(BOOKS_KEY, JSON.stringify(books)); switchBook(n); scheduleCloudSave(); setStatus(`已创建单词本「${n}」。`); });
+$("renameBookBtn").addEventListener("click", () => { const name = prompt("请输入新的单词本名称：", activeBook); if (!name || !name.trim() || name.trim() === activeBook) return; const n = name.trim(); if (books[n]) { alert("这个名称已经被使用。"); return; } books[n] = {deck, mastered}; delete books[activeBook]; activeBook = n; saveDeck(); updateBookSelect(); scheduleCloudSave(); setStatus(`单词本已重命名为「${n}」。`); });
+$("deleteBookBtn").addEventListener("click", () => { if (Object.keys(books).length <= 1) { alert("至少保留一个单词本。"); return; } if (!confirm(`确定删除「${activeBook}」及其中的所有单词和学习状态吗？此操作无法撤销。`)) return; delete books[activeBook]; activeBook = Object.keys(books)[0]; deck = books[activeBook].deck || []; mastered = books[activeBook].mastered || []; localStorage.setItem(BOOKS_KEY, JSON.stringify(books)); updateDeckInfo(); scheduleCloudSave(); setStatus(`已删除单词本，当前为「${activeBook}」。`); });
 $("addWordBtn").addEventListener("click", () => { const german = $("newGerman").value.trim(), chinese = $("newChinese").value.trim(), example = $("newExample").value.trim(); if (!german || !chinese) { setStatus("请至少填写德语和中文意思。", true); return; } const key = c => c.german.toLocaleLowerCase("de")+"\u0000"+c.chinese.toLowerCase(); if ([...deck,...mastered].some(c => key(c) === key({german,chinese}))) { setStatus("当前单词本已存在这个词条。", true); return; } deck.push({german,chinese,example,hard:false}); saveDeck(); $("newGerman").value = ""; $("newChinese").value = ""; $("newExample").value = ""; setStatus(`已添加「${german}」到「${activeBook}」。`); });
+initCloudAuth();
 </script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </body>
