@@ -44,6 +44,9 @@ kbd{font:inherit;font-size:11px;border:1px solid var(--line);border-radius:5px;p
 .notice{font-size:13px;color:var(--muted);line-height:1.6;margin-top:12px}
 .stats{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.pill{background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:6px 10px;font-size:12px;font-weight:650}
 .status{font-size:13px;color:var(--muted);margin-top:12px;min-height:20px}
+.mode-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}.mode-row button{flex:1}
+.hard-btn.active{background:#fff1cc;border-color:#e7bd58;color:#795600}
+.quiz{display:none}.quiz.active{display:block}.quiz-prompt{font-size:clamp(24px,6vw,34px);font-weight:750;line-height:1.4;margin:20px 0;overflow-wrap:anywhere}.quiz-example{font-size:17px;line-height:1.8;background:#f8f9f6;border-radius:14px;padding:16px;margin:16px 0;overflow-wrap:anywhere}.quiz-input{width:100%;border:1px solid var(--line);border-radius:12px;padding:13px;font-size:18px;margin-bottom:10px}.quiz-feedback{min-height:26px;margin:12px 0;font-weight:650}.quiz-feedback.good{color:#287447}.quiz-feedback.bad{color:#b23b32}
 footer{font-size:12px;color:var(--muted);line-height:1.6;text-align:center;padding:12px 8px}
 @media(max-width:520px){.app{padding:17px 13px calc(24px + env(safe-area-inset-bottom))}header{align-items:flex-start;margin-bottom:20px}.logo{width:38px;height:38px}.brand{gap:9px}h1{font-size:20px}.top-actions button{padding:9px 10px;font-size:12px}.panel{padding:16px;border-radius:17px}.settings{grid-template-columns:1fr 1fr;gap:10px}.flashcard{min-height:280px;padding:24px 17px}.card-example{font-size:15px}.controls button{padding:10px 8px;font-size:13px}}
 </style>
@@ -51,7 +54,7 @@ footer{font-size:12px;color:var(--muted);line-height:1.6;text-align:center;paddi
 <body>
 <div class="app">
 <header>
-  <div class="brand"><div class="logo">德</div><div><h1>德语单词卡</h1><div class="subtitle">简单导入，直接开始背</div></div></div>
+  <div class="brand"><div class="logo">德</div><div><h1>Meg的德语单词卡</h1><div class="subtitle">重生之成为德语C1大能</div></div></div>
   <div class="top-actions">
     <button id="exportBtn" title="导出备份">导出备份</button>
     <button id="clearBtn" title="清空单词库">清空</button>
@@ -70,6 +73,7 @@ footer{font-size:12px;color:var(--muted);line-height:1.6;text-align:center;paddi
     <div class="field" id="customWrap" style="display:none"><label for="customAmount">自定义数量</label><input id="customAmount" type="number" min="1" max="5000" value="20"></div>
   </div>
   <div class="start-row"><span class="count" id="countLabel">当前 0 个单词</span><button class="primary" id="startBtn" disabled>开始学习 →</button></div>
+  <div class="mode-row"><button id="quizStartBtn" disabled>✍ 拼写练习</button></div>
   <div class="status" id="importStatus" role="status"></div>
   <div class="notice">建议表格列名使用：德语、中文、例句。也可以使用 German / Chinese / Example。导入时会自动识别常见列名。</div>
 </section>
@@ -88,11 +92,21 @@ footer{font-size:12px;color:var(--muted);line-height:1.6;text-align:center;paddi
     <button class="primary flip" id="flipBtn">显示德语 ↻</button>
     <button id="nextBtn">下一个 →</button>
   </div>
-  <button id="masteredBtn" style="width:100%;margin-top:10px">✓ 已彻底掌握，不再学习这个词</button>
-  <div class="stats"><span class="pill" id="sessionCount">本轮 20 个</span><span class="pill">随机抽取，不重复</span></div>
+  <div class="controls"><button id="hardBtn" class="hard-btn">★ 标记为难词</button><button id="masteredBtn">✓ 已彻底掌握</button></div>
+  <div class="stats"><span class="pill" id="sessionCount">本轮 20 个</span><span class="pill">难词会更频繁出现</span></div>
 </section>
 
-<div class="empty" id="emptyState">导入你的德语单词表，然后选择每次学习的数量。<br>每轮随机抽取，不会在同一轮重复。</div>
+<section class="panel quiz" id="quizPanel">
+  <div class="study-head"><button id="quizBackBtn">← 返回单词库</button><span id="quizProgress">拼写练习</span></div>
+  <div class="progress"><div class="progress-bar" id="quizProgressBar"></div></div>
+  <div class="card-hint">根据中文意思拼写德语</div>
+  <div class="quiz-prompt" id="quizChinese"></div>
+  <div class="quiz-example" id="quizExample"></div>
+  <input class="quiz-input" id="quizAnswer" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="输入德语单词">
+  <div class="quiz-feedback" id="quizFeedback" role="status"></div>
+  <div class="controls"><button id="checkAnswerBtn" class="primary">检查答案</button><button id="nextQuizBtn" disabled>下一题 →</button></div>
+</section>
+<div class="empty" id="emptyState">导入你的德语单词表，然后选择每次学习的数量。<br>每轮随机抽取；标记为难词后会更频繁出现。</div>
 <footer>免费 · 无账号 · 数据仅保存在本设备的浏览器中<br>重要单词请定期点击「导出备份」。</footer>
 </div>
 
@@ -104,6 +118,9 @@ let mastered = [];
 let session = [];
 let index = 0;
 let flipped = false;
+let quizSession = [];
+let quizIndex = 0;
+let quizChecked = false;
 
 const $ = id => document.getElementById(id);
 function setStatus(message, isError=false) {
@@ -148,7 +165,8 @@ function rowsToCards(rows) {
   const chineseCol = findColumn(headers, ["中文","释义","中文释义","意思","翻译","chinese","meaning","translation","back"], headers.length > 1 ? 1 : -1);
   const exampleCol = findColumn(headers, ["例句","例子","示例","example","sentence","beispiel"], -1);
   const statusCol = findColumn(headers, ["状态","status"], -1);
-  const hasHeader = chineseCol >= 0 && headers.some(h => ["德语","德文","单词","词汇","german","deutsch","word","term","front","中文","释义","中文释义","意思","翻译","chinese","meaning","translation","back","例句","例子","示例","example","sentence","beispiel","状态","status"].includes(normalizeHeader(h)));
+  const hardCol = findColumn(headers, ["难词","hard","difficult"], -1);
+  const hasHeader = chineseCol >= 0 && headers.some(h => ["德语","德文","单词","词汇","german","deutsch","word","term","front","中文","释义","中文释义","意思","翻译","chinese","meaning","translation","back","例句","例子","示例","example","sentence","beispiel","状态","status","难词","hard","difficult"].includes(normalizeHeader(h)));
   const data = hasHeader ? rows.slice(1) : rows;
   const gc = hasHeader ? germanCol : 0;
   const cc = hasHeader ? chineseCol : (rows[0].length > 1 ? 1 : -1);
@@ -158,7 +176,8 @@ function rowsToCards(rows) {
     german:String(r[gc] ?? "").trim(),
     chinese:String(r[cc] ?? "").trim(),
     example:ec >= 0 ? String(r[ec] ?? "").trim() : "",
-    mastered:sc >= 0 && /^(已掌握|mastered|learned)$/i.test(String(r[sc] ?? "").trim())
+    mastered:sc >= 0 && /^(已掌握|mastered|learned)$/i.test(String(r[sc] ?? "").trim()),
+    hard:hardCol >= 0 && /^(是|yes|true|1|难词)$/i.test(String(r[hardCol] ?? "").trim())
   })).filter(c => c.german && c.chinese);
 }
 function saveDeck() {
@@ -173,6 +192,7 @@ function updateDeckInfo() {
   $("deckSub").textContent = mastered.length ? `已标记掌握 ${mastered.length} 个；这些词不会再出现在学习轮次中。` : (deck.length ? "可以继续导入新表格；相同德语和中文会自动跳过。" : "支持 CSV 和 Excel（.xlsx）。数据保存在当前浏览器中。");
   $("countLabel").textContent = `待学习 ${deck.length} 个单词`;
   $("startBtn").disabled = deck.length === 0;
+  $("quizStartBtn").disabled = deck.length === 0;
 }
 function shuffle(array) {
   const copy = [...array];
@@ -190,7 +210,11 @@ function selectedAmount() {
 }
 function startStudy() {
   if (!deck.length) return;
-  session = shuffle(deck).slice(0, selectedAmount());
+  const weightedPool = deck.flatMap(card => [card, ...(card.hard ? [card, card] : [])]);
+  const amount = $("amount").value === "all" ? weightedPool.length :
+    $("amount").value === "custom" ? Math.max(1, Math.min(weightedPool.length, Number($("customAmount").value) || 1)) :
+    Math.min(weightedPool.length, Number($("amount").value));
+  session = shuffle(weightedPool).slice(0, amount);
   index = 0; flipped = false;
   $("setupPanel").style.display = "none";
   $("emptyState").style.display = "none";
@@ -201,6 +225,8 @@ function renderCard() {
   const card = session[index];
   if (!card) return;
   $("cardHint").textContent = flipped ? "德语 · 原词" : "中文 · 点击查看德语";
+  $("hardBtn").classList.toggle("active", !!card.hard);
+  $("hardBtn").textContent = card.hard ? "★ 已标记难词（点击取消）" : "★ 标记为难词";
   $("cardMain").textContent = flipped ? card.german : card.chinese;
   $("cardExample").textContent = flipped ? card.example : "";
   $("cardBottom").textContent = flipped ? "点击返回中文" : "点击卡片翻面";
@@ -228,7 +254,7 @@ function markMastered() {
   const cardKey = key(card);
   if (!mastered.some(c => key(c) === cardKey)) mastered.push({german:card.german,chinese:card.chinese,example:card.example});
   deck = deck.filter(c => key(c) !== cardKey);
-  session.splice(index, 1);
+  session = session.filter(c => key(c) !== cardKey);
   saveDeck();
   if (!session.length) {
     $("studyPanel").classList.remove("active");
@@ -284,7 +310,7 @@ async function importFile(file) {
         deck = deck.filter(c => keyOf(c) !== key);
         activeKeys.delete(key);
       } else if (!activeKeys.has(key) && !masteredKeys.has(key)) {
-        deck.push({german:card.german,chinese:card.chinese,example:card.example});
+        deck.push({german:card.german,chinese:card.chinese,example:card.example,hard:!!card.hard});
         activeKeys.add(key); added++;
       }
     }
@@ -301,22 +327,117 @@ function exportBackup() {
   if (!deck.length && !mastered.length) { setStatus("目前没有可导出的单词。", true); return; }
   const quote = v => `"${String(v ?? "").replace(/"/g,'""')}"`;
   const allRows = [
-    ...deck.map(c => [c.german,c.chinese,c.example,"待学习"]),
-    ...mastered.map(c => [c.german,c.chinese,c.example,"已掌握"])
+    ...deck.map(c => [c.german,c.chinese,c.example,"待学习",c.hard ? "是" : "否"]),
+    ...mastered.map(c => [c.german,c.chinese,c.example,"已掌握","否"])
   ];
-  const csv = "\uFEFF德语,中文,例句,状态\r\n" + allRows.map(row => row.map(quote).join(",")).join("\r\n");
+  const csv = "\uFEFF德语,中文,例句,状态,难词\r\n" + allRows.map(row => row.map(quote).join(",")).join("\r\n");
   const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a"); a.href = url; a.download = "德语单词卡备份.csv"; a.click();
   URL.revokeObjectURL(url);
   setStatus("已导出 CSV 备份。");
 }
+
+function toggleHard() {
+  const card = session[index];
+  if (!card) return;
+  const current = deck.find(c => c.german.toLowerCase() === card.german.toLowerCase() && c.chinese.toLowerCase() === card.chinese.toLowerCase());
+  if (!current) return;
+  current.hard = !current.hard;
+  // Keep current session entries in sync, so the button and future repetitions agree.
+  session.forEach(c => {
+    if (c.german.toLowerCase() === current.german.toLowerCase() && c.chinese.toLowerCase() === current.chinese.toLowerCase()) c.hard = current.hard;
+  });
+  saveDeck();
+  renderCard();
+  setStatus(current.hard ? `已将「${current.german}」标记为难词；以后抽取时会更频繁出现。` : `已取消「${current.german}」的难词标记。`);
+}
+function escapeRegExp(value) { return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+function makeBlankExample(card) {
+  const example = card.example || "（这条单词没有例句，请根据中文意思拼写。）";
+  if (!card.example) return example;
+  const re = new RegExp(escapeRegExp(card.german), "gi");
+  const blanked = example.replace(re, "_______");
+  return blanked === example ? `${example}\n\n提示：例句中没有找到原形「${card.german}」，请根据中文意思拼写。` : blanked;
+}
+function startQuiz() {
+  if (!deck.length) return;
+  quizSession = shuffle(deck).slice(0, Math.min(deck.length, selectedAmount()));
+  quizIndex = 0; quizChecked = false;
+  $("setupPanel").style.display = "none";
+  $("studyPanel").classList.remove("active");
+  $("emptyState").style.display = "none";
+  $("quizPanel").classList.add("active");
+  renderQuiz();
+}
+function renderQuiz() {
+  const card = quizSession[quizIndex];
+  if (!card) return;
+  quizChecked = false;
+  $("quizChinese").textContent = card.chinese;
+  $("quizExample").textContent = makeBlankExample(card);
+  $("quizAnswer").value = "";
+  $("quizAnswer").disabled = false;
+  $("quizFeedback").textContent = "";
+  $("quizFeedback").className = "quiz-feedback";
+  $("checkAnswerBtn").disabled = false;
+  $("nextQuizBtn").disabled = true;
+  $("nextQuizBtn").textContent = quizIndex === quizSession.length - 1 ? "完成 ✓" : "下一题 →";
+  $("quizProgress").textContent = `${quizIndex + 1} / ${quizSession.length}`;
+  $("quizProgressBar").style.width = `${((quizIndex + 1) / quizSession.length) * 100}%`;
+  $("quizAnswer").focus();
+}
+function checkQuizAnswer() {
+  if (quizChecked) return;
+  const card = quizSession[quizIndex];
+  if (!card) return;
+  const answer = $("quizAnswer").value.trim().toLocaleLowerCase("de");
+  const correct = card.german.trim().toLocaleLowerCase("de");
+  quizChecked = true;
+  $("quizAnswer").disabled = true;
+  $("checkAnswerBtn").disabled = true;
+  $("nextQuizBtn").disabled = false;
+  const feedback = $("quizFeedback");
+  if (answer === correct) {
+    feedback.textContent = "正确！";
+    feedback.className = "quiz-feedback good";
+  } else {
+    feedback.textContent = `还不正确。答案：${card.german}`;
+    feedback.className = "quiz-feedback bad";
+  }
+}
+function nextQuiz() {
+  if (!quizChecked) return;
+  if (quizIndex < quizSession.length - 1) {
+    quizIndex++;
+    renderQuiz();
+  } else {
+    $("quizPanel").classList.remove("active");
+    $("setupPanel").style.display = "";
+    $("emptyState").style.display = "block";
+    $("emptyState").textContent = `拼写练习完成，共练习 ${quizSession.length} 个单词。可以再开始一轮。`;
+    quizSession = [];
+  }
+}
+function backFromQuiz() {
+  $("quizPanel").classList.remove("active");
+  $("setupPanel").style.display = "";
+  $("emptyState").style.display = "block";
+  $("emptyState").textContent = "导入你的德语单词表，然后选择每次学习的数量。";
+}
+
 $("fileInput").addEventListener("change", e => importFile(e.target.files[0]));
 $("amount").addEventListener("change", () => {$("customWrap").style.display = $("amount").value === "custom" ? "" : "none";});
 $("startBtn").addEventListener("click", startStudy);
 $("flashcard").addEventListener("click", flipCard);
 $("flashcard").addEventListener("keydown", e => {if (e.key === "Enter" || e.key === " ") {e.preventDefault(); flipCard();}});
 $("flipBtn").addEventListener("click", flipCard);
+$("hardBtn").addEventListener("click", toggleHard);
+$("quizStartBtn").addEventListener("click", startQuiz);
+$("quizBackBtn").addEventListener("click", backFromQuiz);
+$("checkAnswerBtn").addEventListener("click", checkQuizAnswer);
+$("nextQuizBtn").addEventListener("click", nextQuiz);
+$("quizAnswer").addEventListener("keydown", e => { if (e.key === "Enter") { if (!quizChecked) checkQuizAnswer(); else nextQuiz(); } });
 $("nextBtn").addEventListener("click", nextCard);
 $("prevBtn").addEventListener("click", prevCard);
 $("backBtn").addEventListener("click", backToSetup);
@@ -326,7 +447,7 @@ $("masteredBtn").addEventListener("click", () => {
 $("exportBtn").addEventListener("click", exportBackup);
 $("clearBtn").addEventListener("click", () => {
   if (confirm("确定清空本设备浏览器中保存的全部单词吗？建议先导出备份。")) {
-    deck = []; mastered = []; session = []; saveDeck(); setStatus("单词库已清空。"); $("emptyState").style.display = "block";
+    deck = []; mastered = []; session = []; quizSession = []; saveDeck(); setStatus("单词库已清空。"); $("emptyState").style.display = "block"; $("studyPanel").classList.remove("active"); $("quizPanel").classList.remove("active"); $("setupPanel").style.display = "";
   }
 });
 try { deck = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch(e) { deck = []; }
