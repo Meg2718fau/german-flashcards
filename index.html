@@ -63,6 +63,17 @@ footer{font-size:12px;color:var(--muted);line-height:1.6;text-align:center;paddi
 
 <section class="panel" id="setupPanel">
   <div class="panel-title">单词库</div>
+  <div class="settings" style="margin-bottom:14px">
+    <div class="field"><label for="bookSelect">当前单词本</label><select id="bookSelect"></select></div>
+    <div class="field"><label>单词本管理</label><div style="display:flex;gap:6px"><button id="newBookBtn" type="button">＋ 新建</button><button id="renameBookBtn" type="button">重命名</button><button id="deleteBookBtn" type="button">删除</button></div></div>
+  </div>
+  <details style="margin:12px 0"><summary style="cursor:pointer;font-weight:650">＋ 单个添加单词</summary>
+    <div class="settings" style="margin-top:12px">
+      <div class="field"><label for="newGerman">德语</label><input id="newGerman" placeholder="z. B. allerdings"></div>
+      <div class="field"><label for="newChinese">中文意思</label><input id="newChinese" placeholder="中文释义"></div>
+      <div class="field" style="grid-column:1/-1"><label for="newExample">例句（可选）</label><input id="newExample" placeholder="德语例句"></div>
+    </div><button class="primary" id="addWordBtn" type="button" style="margin-top:10px">添加到当前单词本</button>
+  </details>
   <div class="import-row">
     <div class="import-info"><strong id="deckTitle">还没有导入单词</strong><span id="deckSub">支持 CSV 和 Excel（.xlsx）。数据保存在当前浏览器中。</span></div>
     <label class="file-label primary" for="fileInput">＋ 导入表格</label>
@@ -113,6 +124,9 @@ footer{font-size:12px;color:var(--muted);line-height:1.6;text-align:center;paddi
 <script>
 const STORAGE_KEY = "minimalGermanFlashcards.v1";
 const MASTERED_KEY = "minimalGermanFlashcards.mastered.v1";
+const BOOKS_KEY = "minimalGermanFlashcards.books.v1";
+let books = {};
+let activeBook = "默认单词本";
 let deck = [];
 let mastered = [];
 let session = [];
@@ -182,12 +196,32 @@ function rowsToCards(rows) {
 }
 function saveDeck() {
   try {
+    books[activeBook] = {deck, mastered};
+    localStorage.setItem(BOOKS_KEY, JSON.stringify(books));
+    // Keep legacy keys updated for backwards compatibility.
     localStorage.setItem(STORAGE_KEY, JSON.stringify(deck));
     localStorage.setItem(MASTERED_KEY, JSON.stringify(mastered));
   } catch(e) { setStatus("保存失败：浏览器存储空间不足。请导出备份。", true); }
   updateDeckInfo();
 }
+function updateBookSelect() {
+  const select = $("bookSelect");
+  if (!select) return;
+  select.innerHTML = "";
+  Object.keys(books).forEach(name => { const opt = document.createElement("option"); opt.value = name; opt.textContent = name; select.appendChild(opt); });
+  select.value = activeBook;
+}
+function switchBook(name) {
+  if (!books[name]) return;
+  books[activeBook] = {deck, mastered};
+  activeBook = name;
+  deck = Array.isArray(books[name].deck) ? books[name].deck : [];
+  mastered = Array.isArray(books[name].mastered) ? books[name].mastered : [];
+  updateBookSelect(); saveDeck();
+  $("emptyState").textContent = `当前单词本：${activeBook}。导入单词表或开始学习。`;
+}
 function updateDeckInfo() {
+  updateBookSelect();
   $("deckTitle").textContent = deck.length ? `待学习 ${deck.length} 个单词` : "还没有待学习的单词";
   $("deckSub").textContent = mastered.length ? `已标记掌握 ${mastered.length} 个；这些词不会再出现在学习轮次中。` : (deck.length ? "可以继续导入新表格；相同德语和中文会自动跳过。" : "支持 CSV 和 Excel（.xlsx）。数据保存在当前浏览器中。");
   $("countLabel").textContent = `待学习 ${deck.length} 个单词`;
@@ -315,7 +349,7 @@ async function importFile(file) {
       }
     }
     saveDeck();
-    setStatus(`导入完成：识别 ${imported.length} 个，新增 ${added} 个${marked ? `，恢复已掌握状态 ${marked} 个` : ""}。`);
+    setStatus(`已导入到「${activeBook}」：识别 ${imported.length} 个，新增 ${added} 个${marked ? `，恢复已掌握状态 ${marked} 个` : ""}。`);
     $("fileInput").value = "";
     $("emptyState").style.display = "none";
   } catch (e) {
@@ -324,7 +358,7 @@ async function importFile(file) {
   }
 }
 function exportBackup() {
-  if (!deck.length && !mastered.length) { setStatus("目前没有可导出的单词。", true); return; }
+  if (!deck.length && !mastered.length) { setStatus("当前单词本没有可导出的单词。", true); return; }
   const quote = v => `"${String(v ?? "").replace(/"/g,'""')}"`;
   const allRows = [
     ...deck.map(c => [c.german,c.chinese,c.example,"待学习",c.hard ? "是" : "否"]),
@@ -446,13 +480,26 @@ $("masteredBtn").addEventListener("click", () => {
 });
 $("exportBtn").addEventListener("click", exportBackup);
 $("clearBtn").addEventListener("click", () => {
-  if (confirm("确定清空本设备浏览器中保存的全部单词吗？建议先导出备份。")) {
-    deck = []; mastered = []; session = []; quizSession = []; saveDeck(); setStatus("单词库已清空。"); $("emptyState").style.display = "block"; $("studyPanel").classList.remove("active"); $("quizPanel").classList.remove("active"); $("setupPanel").style.display = "";
+  if (confirm("确定清空当前单词本「${activeBook}」中的全部单词吗？其他单词本不会受影响。建议先导出备份。")) {
+    deck = []; mastered = []; session = []; quizSession = []; saveDeck(); setStatus(`「${activeBook}」已清空。`); $("emptyState").style.display = "block"; $("studyPanel").classList.remove("active"); $("quizPanel").classList.remove("active"); $("setupPanel").style.display = "";
   }
 });
-try { deck = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch(e) { deck = []; }
-try { mastered = JSON.parse(localStorage.getItem(MASTERED_KEY) || "[]"); } catch(e) { mastered = []; }
+try { books = JSON.parse(localStorage.getItem(BOOKS_KEY) || "{}"); } catch(e) { books = {}; }
+if (!books || typeof books !== "object" || !Object.keys(books).length) {
+  let oldDeck = [], oldMastered = [];
+  try { oldDeck = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch(e) {}
+  try { oldMastered = JSON.parse(localStorage.getItem(MASTERED_KEY) || "[]"); } catch(e) {}
+  books = {"默认单词本": {deck:oldDeck, mastered:oldMastered}};
+}
+activeBook = Object.keys(books)[0] || "默认单词本";
+deck = Array.isArray(books[activeBook].deck) ? books[activeBook].deck : [];
+mastered = Array.isArray(books[activeBook].mastered) ? books[activeBook].mastered : [];
 updateDeckInfo();
+$("bookSelect").addEventListener("change", e => switchBook(e.target.value));
+$("newBookBtn").addEventListener("click", () => { const name = prompt("新单词本名称："); if (!name || !name.trim()) return; const n = name.trim(); if (books[n]) { alert("这个单词本已经存在。"); return; } books[n] = {deck:[], mastered:[]}; books[activeBook] = {deck, mastered}; localStorage.setItem(BOOKS_KEY, JSON.stringify(books)); switchBook(n); setStatus(`已创建单词本「${n}」。`); });
+$("renameBookBtn").addEventListener("click", () => { const name = prompt("请输入新的单词本名称：", activeBook); if (!name || !name.trim() || name.trim() === activeBook) return; const n = name.trim(); if (books[n]) { alert("这个名称已经被使用。"); return; } books[n] = {deck, mastered}; delete books[activeBook]; activeBook = n; saveDeck(); updateBookSelect(); setStatus(`单词本已重命名为「${n}」。`); });
+$("deleteBookBtn").addEventListener("click", () => { if (Object.keys(books).length <= 1) { alert("至少保留一个单词本。"); return; } if (!confirm(`确定删除「${activeBook}」及其中的所有单词和学习状态吗？此操作无法撤销。`)) return; delete books[activeBook]; activeBook = Object.keys(books)[0]; deck = books[activeBook].deck || []; mastered = books[activeBook].mastered || []; localStorage.setItem(BOOKS_KEY, JSON.stringify(books)); updateDeckInfo(); setStatus(`已删除单词本，当前为「${activeBook}」。`); });
+$("addWordBtn").addEventListener("click", () => { const german = $("newGerman").value.trim(), chinese = $("newChinese").value.trim(), example = $("newExample").value.trim(); if (!german || !chinese) { setStatus("请至少填写德语和中文意思。", true); return; } const key = c => c.german.toLocaleLowerCase("de")+"\u0000"+c.chinese.toLowerCase(); if ([...deck,...mastered].some(c => key(c) === key({german,chinese}))) { setStatus("当前单词本已存在这个词条。", true); return; } deck.push({german,chinese,example,hard:false}); saveDeck(); $("newGerman").value = ""; $("newChinese").value = ""; $("newExample").value = ""; setStatus(`已添加「${german}」到「${activeBook}」。`); });
 </script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </body>
