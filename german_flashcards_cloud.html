@@ -1,0 +1,719 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f5f5f2">
+<title>德语单词卡</title>
+<style>
+:root{--bg:#f5f5f2;--panel:#fff;--ink:#20231f;--muted:#73776f;--line:#e4e5df;--accent:#315e4b;--accent-soft:#e5eee8;--shadow:0 14px 40px rgba(26,36,29,.08)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC",sans-serif;min-height:100vh}
+button,input,select{font:inherit}
+button{cursor:pointer}
+.app{max-width:780px;margin:0 auto;padding:24px 18px calc(30px + env(safe-area-inset-bottom))}
+header{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:26px}
+.brand{display:flex;align-items:center;gap:12px}.logo{width:42px;height:42px;border-radius:14px;background:var(--accent);color:white;display:grid;place-items:center;font-weight:800;font-size:20px}
+h1{font-size:22px;margin:0;font-weight:750;letter-spacing:-.5px}.subtitle{font-size:13px;color:var(--muted);margin-top:4px}
+.top-actions{display:flex;gap:8px;flex-wrap:wrap}
+button,.file-label{border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:10px 13px;border-radius:12px;font-weight:600;font-size:14px;display:inline-flex;align-items:center;justify-content:center;gap:7px}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button:disabled{opacity:.4;cursor:not-allowed}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:20px;box-shadow:var(--shadow);margin-bottom:16px}
+.panel-title{font-size:15px;font-weight:750;margin-bottom:14px}
+.import-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.import-info{min-width:180px;flex:1}.import-info strong{display:block;font-size:15px}.import-info span{font-size:13px;color:var(--muted);display:block;margin-top:5px;line-height:1.5}
+input[type=file]{display:none}
+.settings{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}
+.field label{display:block;font-size:13px;color:var(--muted);margin-bottom:7px}
+.field select,.field input{width:100%;border:1px solid var(--line);background:#fff;border-radius:11px;padding:11px 12px;color:var(--ink);min-height:44px}
+.start-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:18px}.count{font-size:13px;color:var(--muted)}
+.study{display:none}.study.active{display:block}
+.study-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;color:var(--muted);font-size:13px}
+.progress{height:5px;background:#e9ebe5;border-radius:99px;overflow:hidden;margin-bottom:18px}.progress-bar{height:100%;background:var(--accent);width:0;transition:width .2s}
+.flashcard{width:100%;min-height:300px;border:1px solid var(--line);background:var(--panel);border-radius:24px;padding:28px 22px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;box-shadow:var(--shadow);position:relative;user-select:none;cursor:pointer}
+.flashcard:focus-visible{outline:3px solid #9bb8a7;outline-offset:3px}
+.card-hint{font-size:12px;color:var(--muted);letter-spacing:.5px;margin-bottom:20px;text-transform:uppercase}
+.card-main{font-size:clamp(25px,6vw,38px);font-weight:750;line-height:1.35;overflow-wrap:anywhere}
+.card-example{font-size:16px;line-height:1.65;color:var(--muted);margin-top:18px;max-width:560px;white-space:pre-wrap}
+.card-bottom{font-size:12px;color:var(--muted);position:absolute;bottom:18px}
+.controls{display:flex;gap:10px;margin-top:14px}.controls button{flex:1;min-height:48px}
+.controls .flip{flex:1.4}
+kbd{font:inherit;font-size:11px;border:1px solid var(--line);border-radius:5px;padding:1px 4px;color:var(--muted)}
+.empty{text-align:center;padding:30px 10px;color:var(--muted);line-height:1.7}
+.notice{font-size:13px;color:var(--muted);line-height:1.6;margin-top:12px}
+.stats{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.pill{background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:6px 10px;font-size:12px;font-weight:650}
+.status{font-size:13px;color:var(--muted);margin-top:12px;min-height:20px}
+.mode-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}.mode-row button{flex:1}
+.hard-btn.active{background:#fff1cc;border-color:#e7bd58;color:#795600}
+.quiz{display:none}.quiz.active{display:block}.quiz-prompt{font-size:clamp(24px,6vw,34px);font-weight:750;line-height:1.4;margin:20px 0;overflow-wrap:anywhere}.quiz-example{font-size:17px;line-height:1.8;background:#f8f9f6;border-radius:14px;padding:16px;margin:16px 0;overflow-wrap:anywhere}.quiz-input{width:100%;border:1px solid var(--line);border-radius:12px;padding:13px;font-size:18px;margin-bottom:10px}.quiz-feedback{min-height:26px;margin:12px 0;font-weight:650}.quiz-feedback.good{color:#287447}.quiz-feedback.bad{color:#b23b32}
+footer{font-size:12px;color:var(--muted);line-height:1.6;text-align:center;padding:12px 8px}
+
+.auth-panel{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.auth-copy{flex:1;min-width:180px}.auth-copy strong{display:block;font-size:15px}.auth-copy span{display:block;font-size:13px;color:var(--muted);line-height:1.5;margin-top:5px}
+.auth-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.auth-status{font-size:12px;color:var(--muted);margin-top:8px;min-height:18px}
+@media(max-width:520px){.app{padding:17px 13px calc(24px + env(safe-area-inset-bottom))}header{align-items:flex-start;margin-bottom:20px}.logo{width:38px;height:38px}.brand{gap:9px}h1{font-size:20px}.top-actions button{padding:9px 10px;font-size:12px}.panel{padding:16px;border-radius:17px}.settings{grid-template-columns:1fr 1fr;gap:10px}.flashcard{min-height:280px;padding:24px 17px}.card-example{font-size:15px}.controls button{padding:10px 8px;font-size:13px}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div class="brand"><div class="logo">德</div><div><h1>Meg的德语单词卡</h1><div class="subtitle">重生之成为德语C1大能</div></div></div>
+  <div class="top-actions">
+    <button id="exportBtn" title="导出备份">导出备份</button>
+    <button id="clearBtn" title="清空单词库">清空</button>
+  </div>
+</header>
+
+<section class="panel" id="authPanel">
+  <div class="auth-panel">
+    <div class="auth-copy">
+      <strong id="authTitle">跨设备同步</strong>
+      <span id="authDescription">使用 Google 登录后，可在 Mac 和 iPhone 间同步单词本。</span>
+    </div>
+    <div class="auth-actions">
+      <button class="primary" id="googleLoginBtn" type="button">使用 Google 登录</button>
+      <button id="googleLogoutBtn" type="button" style="display:none">退出登录</button>
+    </div>
+  </div>
+  <div class="auth-status" id="cloudStatus" role="status">云同步尚未连接。</div>
+</section>
+
+<section class="panel" id="setupPanel">
+  <div class="panel-title">单词库</div>
+  <div class="settings" style="margin-bottom:14px">
+    <div class="field"><label for="bookSelect">当前单词本</label><select id="bookSelect"></select></div>
+    <div class="field"><label>单词本管理</label><div style="display:flex;gap:6px"><button id="newBookBtn" type="button">＋ 新建</button><button id="renameBookBtn" type="button">重命名</button><button id="deleteBookBtn" type="button">删除</button></div></div>
+  </div>
+  <details style="margin:12px 0"><summary style="cursor:pointer;font-weight:650">＋ 单个添加单词</summary>
+    <div class="settings" style="margin-top:12px">
+      <div class="field"><label for="newGerman">德语</label><input id="newGerman" placeholder="z. B. allerdings"></div>
+      <div class="field"><label for="newChinese">中文意思</label><input id="newChinese" placeholder="中文释义"></div>
+      <div class="field" style="grid-column:1/-1"><label for="newExample">例句（可选）</label><input id="newExample" placeholder="德语例句"></div>
+    </div><button class="primary" id="addWordBtn" type="button" style="margin-top:10px">添加到当前单词本</button>
+  </details>
+  <div class="import-row">
+    <div class="import-info"><strong id="deckTitle">还没有导入单词</strong><span id="deckSub">支持 CSV 和 Excel（.xlsx）。数据保存在当前浏览器中。</span></div>
+    <label class="file-label primary" for="fileInput">＋ 导入表格</label>
+    <input id="fileInput" type="file" accept=".csv,.tsv,.txt,.xlsx">
+  </div>
+  <div class="settings">
+    <div class="field"><label for="amount">每次学习数量</label><select id="amount"><option value="10">10 个</option><option value="20" selected>20 个</option><option value="30">30 个</option><option value="50">50 个</option><option value="100">100 个</option><option value="all">全部单词</option><option value="custom">自定义数量…</option></select></div>
+    <div class="field" id="customWrap" style="display:none"><label for="customAmount">自定义数量</label><input id="customAmount" type="number" min="1" max="5000" value="20"></div>
+  </div>
+  <div class="start-row"><span class="count" id="countLabel">当前 0 个单词</span><button class="primary" id="startBtn" disabled>开始学习 →</button></div>
+  <div class="mode-row"><button id="quizStartBtn" disabled>✍ 拼写练习</button></div>
+  <div class="status" id="importStatus" role="status"></div>
+  <div class="notice">建议表格列名使用：德语、中文、例句。也可以使用 German / Chinese / Example。导入时会自动识别常见列名。</div>
+</section>
+
+<section class="study" id="studyPanel">
+  <div class="study-head"><button id="backBtn">← 返回单词库</button><span id="progressText">1 / 20</span></div>
+  <div class="progress"><div class="progress-bar" id="progressBar"></div></div>
+  <div class="flashcard" id="flashcard" tabindex="0" role="button" aria-label="点击翻转卡片">
+    <div class="card-hint" id="cardHint">中文 · 点击查看德语</div>
+    <div class="card-main" id="cardMain">准备开始</div>
+    <div class="card-example" id="cardExample"></div>
+    <div class="card-bottom" id="cardBottom">点击卡片翻面</div>
+  </div>
+  <div class="controls">
+    <button id="prevBtn">← 上一个</button>
+    <button class="primary flip" id="flipBtn">显示德语 ↻</button>
+    <button id="nextBtn">下一个 →</button>
+  </div>
+  <div class="controls"><button id="hardBtn" class="hard-btn">★ 标记为难词</button><button id="masteredBtn">✓ 已彻底掌握</button></div>
+  <div class="stats"><span class="pill" id="sessionCount">本轮 20 个</span><span class="pill">难词会更频繁出现</span></div>
+</section>
+
+<section class="panel quiz" id="quizPanel">
+  <div class="study-head"><button id="quizBackBtn">← 返回单词库</button><span id="quizProgress">拼写练习</span></div>
+  <div class="progress"><div class="progress-bar" id="quizProgressBar"></div></div>
+  <div class="card-hint">根据中文意思拼写德语</div>
+  <div class="quiz-prompt" id="quizChinese"></div>
+  <div class="quiz-example" id="quizExample"></div>
+  <input class="quiz-input" id="quizAnswer" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="输入德语单词">
+  <div class="quiz-feedback" id="quizFeedback" role="status"></div>
+  <div class="controls"><button id="checkAnswerBtn" class="primary">检查答案</button><button id="nextQuizBtn" disabled>下一题 →</button></div>
+</section>
+<div class="empty" id="emptyState">导入你的德语单词表，然后选择每次学习的数量。<br>每轮随机抽取；标记为难词后会更频繁出现。</div>
+<footer>免费使用 · 可在本设备保存，也可登录 Google 启用云同步。<br>重要单词请定期点击「导出备份」。</footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL = "https://ujutalqmamtiyyacjwxi.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_3nk1UZrjQruLifDwauhKDw_dIKU-KPN";
+const STORAGE_KEY = "minimalGermanFlashcards.v1";
+const MASTERED_KEY = "minimalGermanFlashcards.mastered.v1";
+const BOOKS_KEY = "minimalGermanFlashcards.books.v1";
+let books = {};
+let activeBook = "默认单词本";
+let deck = [];
+let mastered = [];
+let session = [];
+let index = 0;
+let flipped = false;
+let quizSession = [];
+let quizIndex = 0;
+let quizChecked = false;
+
+const $ = id => document.getElementById(id);
+
+let supabaseClient = null;
+let currentUser = null;
+let cloudReady = false;
+let cloudSaveTimer = null;
+let cloudOperation = Promise.resolve();
+
+function setCloudStatus(message, isError=false) {
+  const el = $("cloudStatus");
+  if (!el) return;
+  el.textContent = message;
+  el.style.color = isError ? "#b23b32" : "";
+}
+function setAuthUI(user) {
+  currentUser = user || null;
+  $("googleLoginBtn").style.display = currentUser ? "none" : "";
+  $("googleLogoutBtn").style.display = currentUser ? "" : "none";
+  $("authTitle").textContent = currentUser ? `已登录：${currentUser.email || "Google 用户"}` : "跨设备同步";
+  $("authDescription").textContent = currentUser
+    ? "当前账号已连接。请在其他设备使用同一个 Google 账号登录。"
+    : "使用 Google 登录后，可在 Mac 和 iPhone 间同步单词本。";
+}
+function localBooksSnapshot() {
+  const snapshot = {};
+  for (const [name, book] of Object.entries(books || {})) {
+    snapshot[name] = {
+      deck: Array.isArray(book?.deck) ? book.deck : [],
+      mastered: Array.isArray(book?.mastered) ? book.mastered : []
+    };
+  }
+  if (!Object.keys(snapshot).length) snapshot["默认单词本"] = {deck: [], mastered: []};
+  snapshot[activeBook] = {deck, mastered};
+  return snapshot;
+}
+function applyBooksSnapshot(snapshot) {
+  const clean = {};
+  if (snapshot && typeof snapshot === "object" && !Array.isArray(snapshot)) {
+    for (const [name, book] of Object.entries(snapshot)) {
+      if (!name || !book || typeof book !== "object") continue;
+      clean[name] = {
+        deck: Array.isArray(book.deck) ? book.deck : [],
+        mastered: Array.isArray(book.mastered) ? book.mastered : []
+      };
+    }
+  }
+  books = Object.keys(clean).length ? clean : {"默认单词本": {deck: [], mastered: []}};
+  activeBook = Object.keys(books)[0];
+  deck = books[activeBook].deck;
+  mastered = books[activeBook].mastered;
+  localStorage.setItem(BOOKS_KEY, JSON.stringify(books));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(deck));
+  localStorage.setItem(MASTERED_KEY, JSON.stringify(mastered));
+  updateDeckInfo();
+}
+function saveCloudNow() {
+  if (!supabaseClient || !currentUser || !cloudReady) return Promise.resolve();
+  const payload = {
+    user_id: currentUser.id,
+    data: {books: localBooksSnapshot(), activeBook},
+    updated_at: new Date().toISOString()
+  };
+  cloudOperation = cloudOperation.then(async () => {
+    const {error} = await supabaseClient.from("flashcard_data").upsert(payload, {onConflict: "user_id"});
+    if (error) throw error;
+    setCloudStatus("云端已同步 · " + new Date().toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"}));
+  }).catch(error => {
+    console.error("Cloud save failed:", error);
+    setCloudStatus("云端保存失败；本设备数据仍已保存。请检查网络后重试。", true);
+  });
+  return cloudOperation;
+}
+function scheduleCloudSave() {
+  if (!supabaseClient || !currentUser || !cloudReady) return;
+  clearTimeout(cloudSaveTimer);
+  setCloudStatus("有未同步的更改…");
+  cloudSaveTimer = setTimeout(() => { saveCloudNow(); }, 700);
+}
+async function syncAfterLogin(user) {
+  if (!supabaseClient || !user) return;
+  cloudReady = false;
+  setCloudStatus("正在读取云端单词本…");
+  try {
+    const {data: row, error} = await supabaseClient
+      .from("flashcard_data")
+      .select("data, updated_at")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (error) throw error;
+
+    const localSnapshot = localBooksSnapshot();
+    const localHasWords = Object.values(localSnapshot).some(b => b.deck.length || b.mastered.length);
+    const cloudBooks = row?.data?.books;
+    const cloudHasBooks = cloudBooks && typeof cloudBooks === "object" && Object.keys(cloudBooks).length > 0;
+    if (!row || !cloudHasBooks) {
+      // First login for this account: migrate this device's local books to the cloud.
+      const payload = {
+        user_id: user.id,
+        data: {books: localSnapshot, activeBook},
+        updated_at: new Date().toISOString()
+      };
+      const {error: saveError} = await supabaseClient.from("flashcard_data").upsert(payload, {onConflict:"user_id"});
+      if (saveError) throw saveError;
+      cloudReady = true;
+      setCloudStatus(localHasWords ? "首次登录：已将本设备的单词本上传到云端。" : "云端单词本已创建。可以导入单词或在其他设备登录。");
+      return;
+    }
+
+    const cloudSnapshot = JSON.stringify(cloudBooks);
+    const localSnapshotText = JSON.stringify(localSnapshot);
+    if (localHasWords && cloudSnapshot !== localSnapshotText) {
+      const useCloud = confirm("这个 Google 账号的云端已经有单词数据。\n\n点击“确定”：使用云端数据覆盖本设备当前单词本。\n点击“取消”：保留本设备数据，接下来会再询问是否上传本设备数据覆盖云端。");
+      if (useCloud) {
+        applyBooksSnapshot(cloudBooks);
+        activeBook = row.data.activeBook && books[row.data.activeBook] ? row.data.activeBook : Object.keys(books)[0];
+        deck = books[activeBook].deck;
+        mastered = books[activeBook].mastered;
+        updateDeckInfo();
+        localStorage.setItem(BOOKS_KEY, JSON.stringify(books));
+      } else {
+        const uploadLocal = confirm("确定要用本设备的单词本覆盖云端数据吗？\n\n如果选择“取消”，将暂不启用云同步，云端和本设备数据都不会被覆盖。");
+        if (!uploadLocal) {
+          setCloudStatus("已登录，但暂未同步。请先导出本地备份，再重新登录选择同步方向。", true);
+          return;
+        }
+        const {error: uploadError} = await supabaseClient.from("flashcard_data").upsert({
+          user_id: user.id, data: {books: localSnapshot, activeBook}, updated_at: new Date().toISOString()
+        }, {onConflict:"user_id"});
+        if (uploadError) throw uploadError;
+      }
+    } else {
+      applyBooksSnapshot(cloudBooks);
+      activeBook = row.data.activeBook && books[row.data.activeBook] ? row.data.activeBook : Object.keys(books)[0];
+      deck = books[activeBook].deck;
+      mastered = books[activeBook].mastered;
+      updateDeckInfo();
+      localStorage.setItem(BOOKS_KEY, JSON.stringify(books));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(deck));
+      localStorage.setItem(MASTERED_KEY, JSON.stringify(mastered));
+    }
+    cloudReady = true;
+    setCloudStatus("云端已连接 · 最近更新 " + (row.updated_at ? new Date(row.updated_at).toLocaleString() : "时间未知"));
+  } catch (error) {
+    console.error("Cloud sync failed:", error);
+    cloudReady = false;
+    setCloudStatus("云端同步失败：" + (error.message || "请检查数据库表和 RLS 配置。"), true);
+  }
+}
+async function initCloudAuth() {
+  if (!window.supabase?.createClient) {
+    setCloudStatus("Supabase 客户端加载失败。请检查网络后刷新页面。", true);
+    return;
+  }
+  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+  $("googleLoginBtn").addEventListener("click", async () => {
+    setCloudStatus("正在跳转到 Google 登录…");
+    const {error} = await supabaseClient.auth.signInWithOAuth({
+      provider: "google",
+      options: {redirectTo: window.location.href.split("#")[0]}
+    });
+    if (error) setCloudStatus("无法启动 Google 登录：" + error.message, true);
+  });
+  $("googleLogoutBtn").addEventListener("click", async () => {
+    const {error} = await supabaseClient.auth.signOut();
+    if (error) {
+      setCloudStatus("退出登录失败：" + error.message, true);
+      return;
+    }
+    cloudReady = false;
+    setAuthUI(null);
+    setCloudStatus("已退出登录。本设备的本地数据仍然保留。");
+  });
+  const {data, error} = await supabaseClient.auth.getSession();
+  if (error) {
+    setCloudStatus("读取登录状态失败：" + error.message, true);
+    return;
+  }
+  setAuthUI(data.session?.user || null);
+  if (data.session?.user) await syncAfterLogin(data.session.user);
+  else setCloudStatus("尚未登录。单词仍保存在本设备；登录后可启用云同步。");
+  supabaseClient.auth.onAuthStateChange((event, session) => {
+    if (event === "SIGNED_IN" && session?.user && session.user.id !== currentUser?.id) {
+      setAuthUI(session.user);
+      setTimeout(() => syncAfterLogin(session.user), 0);
+    } else if (event === "SIGNED_OUT") {
+      cloudReady = false;
+      setAuthUI(null);
+      setCloudStatus("已退出登录。本设备的本地数据仍然保留。");
+    }
+  });
+}
+function setStatus(message, isError=false) {
+  $("importStatus").textContent = message;
+  $("importStatus").style.color = isError ? "#b23b32" : "";
+}
+function normalizeHeader(value) {
+  return String(value ?? "").trim().toLowerCase().replace(/[ _-]/g, "");
+}
+function findColumn(headers, candidates, fallback) {
+  for (const candidate of candidates) {
+    const i = headers.findIndex(h => normalizeHeader(h) === normalizeHeader(candidate));
+    if (i >= 0) return i;
+  }
+  return fallback;
+}
+function parseDelimited(text, delimiter) {
+  const rows = [];
+  let row = [], field = "", quoted = false;
+  for (let i=0; i<text.length; i++) {
+    const c = text[i];
+    if (c === '"') {
+      if (quoted && text[i+1] === '"') { field += '"'; i++; }
+      else quoted = !quoted;
+    } else if (c === delimiter && !quoted) {
+      row.push(field); field = "";
+    } else if ((c === "\n" || c === "\r") && !quoted) {
+      if (c === "\r" && text[i+1] === "\n") i++;
+      row.push(field);
+      if (row.some(v => String(v).trim() !== "")) rows.push(row);
+      row = []; field = "";
+    } else field += c;
+  }
+  row.push(field);
+  if (row.some(v => String(v).trim() !== "")) rows.push(row);
+  return rows;
+}
+function rowsToCards(rows) {
+  if (!rows.length) return [];
+  const headers = rows[0].map(v => String(v ?? "").trim());
+  const germanCol = findColumn(headers, ["德语","德文","单词","词汇","german","deutsch","word","term","front"], 0);
+  const chineseCol = findColumn(headers, ["中文","释义","中文释义","意思","翻译","chinese","meaning","translation","back"], headers.length > 1 ? 1 : -1);
+  const exampleCol = findColumn(headers, ["例句","例子","示例","example","sentence","beispiel"], -1);
+  const statusCol = findColumn(headers, ["状态","status"], -1);
+  const hardCol = findColumn(headers, ["难词","hard","difficult"], -1);
+  const hasHeader = chineseCol >= 0 && headers.some(h => ["德语","德文","单词","词汇","german","deutsch","word","term","front","中文","释义","中文释义","意思","翻译","chinese","meaning","translation","back","例句","例子","示例","example","sentence","beispiel","状态","status","难词","hard","difficult"].includes(normalizeHeader(h)));
+  const data = hasHeader ? rows.slice(1) : rows;
+  const gc = hasHeader ? germanCol : 0;
+  const cc = hasHeader ? chineseCol : (rows[0].length > 1 ? 1 : -1);
+  const ec = hasHeader ? exampleCol : (rows[0].length > 2 ? 2 : -1);
+  const sc = hasHeader ? statusCol : -1;
+  return data.map(r => ({
+    german:String(r[gc] ?? "").trim(),
+    chinese:String(r[cc] ?? "").trim(),
+    example:ec >= 0 ? String(r[ec] ?? "").trim() : "",
+    mastered:sc >= 0 && /^(已掌握|mastered|learned)$/i.test(String(r[sc] ?? "").trim()),
+    hard:hardCol >= 0 && /^(是|yes|true|1|难词)$/i.test(String(r[hardCol] ?? "").trim())
+  })).filter(c => c.german && c.chinese);
+}
+function saveDeck() {
+  try {
+    books[activeBook] = {deck, mastered};
+    localStorage.setItem(BOOKS_KEY, JSON.stringify(books));
+    // Keep legacy keys updated for backwards compatibility.
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(deck));
+    localStorage.setItem(MASTERED_KEY, JSON.stringify(mastered));
+  } catch(e) { setStatus("保存失败：浏览器存储空间不足。请导出备份。", true); }
+  updateDeckInfo();
+  scheduleCloudSave();
+}
+function updateBookSelect() {
+  const select = $("bookSelect");
+  if (!select) return;
+  select.innerHTML = "";
+  Object.keys(books).forEach(name => { const opt = document.createElement("option"); opt.value = name; opt.textContent = name; select.appendChild(opt); });
+  select.value = activeBook;
+}
+function switchBook(name) {
+  if (!books[name]) return;
+  books[activeBook] = {deck, mastered};
+  activeBook = name;
+  deck = Array.isArray(books[name].deck) ? books[name].deck : [];
+  mastered = Array.isArray(books[name].mastered) ? books[name].mastered : [];
+  updateBookSelect(); saveDeck();
+  $("emptyState").textContent = `当前单词本：${activeBook}。导入单词表或开始学习。`;
+}
+function updateDeckInfo() {
+  updateBookSelect();
+  $("deckTitle").textContent = deck.length ? `待学习 ${deck.length} 个单词` : "还没有待学习的单词";
+  $("deckSub").textContent = mastered.length ? `已标记掌握 ${mastered.length} 个；这些词不会再出现在学习轮次中。` : (deck.length ? "可以继续导入新表格；相同德语和中文会自动跳过。" : "支持 CSV 和 Excel（.xlsx）。数据保存在当前浏览器中。");
+  $("countLabel").textContent = `待学习 ${deck.length} 个单词`;
+  $("startBtn").disabled = deck.length === 0;
+  $("quizStartBtn").disabled = deck.length === 0;
+}
+function shuffle(array) {
+  const copy = [...array];
+  for (let i=copy.length-1; i>0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+function selectedAmount() {
+  const value = $("amount").value;
+  if (value === "all") return deck.length;
+  if (value === "custom") return Math.max(1, Math.min(deck.length, Number($("customAmount").value) || 1));
+  return Math.min(deck.length, Number(value));
+}
+function startStudy() {
+  if (!deck.length) return;
+  const weightedPool = deck.flatMap(card => [card, ...(card.hard ? [card, card] : [])]);
+  const amount = $("amount").value === "all" ? weightedPool.length :
+    $("amount").value === "custom" ? Math.max(1, Math.min(weightedPool.length, Number($("customAmount").value) || 1)) :
+    Math.min(weightedPool.length, Number($("amount").value));
+  session = shuffle(weightedPool).slice(0, amount);
+  index = 0; flipped = false;
+  $("setupPanel").style.display = "none";
+  $("emptyState").style.display = "none";
+  $("studyPanel").classList.add("active");
+  renderCard();
+}
+function renderCard() {
+  const card = session[index];
+  if (!card) return;
+  $("cardHint").textContent = flipped ? "德语 · 原词" : "中文 · 点击查看德语";
+  $("hardBtn").classList.toggle("active", !!card.hard);
+  $("hardBtn").textContent = card.hard ? "★ 已标记难词（点击取消）" : "★ 标记为难词";
+  $("cardMain").textContent = flipped ? card.german : card.chinese;
+  $("cardExample").textContent = flipped ? card.example : "";
+  $("cardBottom").textContent = flipped ? "点击返回中文" : "点击卡片翻面";
+  $("progressText").textContent = `${index+1} / ${session.length}`;
+  $("progressBar").style.width = `${((index+1)/session.length)*100}%`;
+  $("sessionCount").textContent = `本轮 ${session.length} 个`;
+  $("prevBtn").disabled = index === 0;
+  $("nextBtn").textContent = index === session.length-1 ? "完成 ✓" : "下一个 →";
+}
+function flipCard() { flipped = !flipped; renderCard(); }
+function nextCard() {
+  if (index < session.length-1) { index++; flipped = false; renderCard(); }
+  else {
+    $("studyPanel").classList.remove("active");
+    $("setupPanel").style.display = "";
+    $("emptyState").style.display = "block";
+    $("emptyState").innerHTML = `本轮完成。你学习了 <strong>${session.length}</strong> 个单词。<br>可以调整数量，再随机开始一轮。`;
+  }
+}
+function prevCard() { if (index > 0) { index--; flipped = false; renderCard(); } }
+function markMastered() {
+  const card = session[index];
+  if (!card) return;
+  const key = c => c.german.toLowerCase()+"\u0000"+c.chinese.toLowerCase();
+  const cardKey = key(card);
+  if (!mastered.some(c => key(c) === cardKey)) mastered.push({german:card.german,chinese:card.chinese,example:card.example});
+  deck = deck.filter(c => key(c) !== cardKey);
+  session = session.filter(c => key(c) !== cardKey);
+  saveDeck();
+  if (!session.length) {
+    $("studyPanel").classList.remove("active");
+    $("setupPanel").style.display = "";
+    $("emptyState").style.display = "block";
+    $("emptyState").innerHTML = "本轮没有剩余单词了。已掌握的单词不会再被抽到。";
+    setStatus(`已将「${card.german}」标记为掌握。`);
+    return;
+  }
+  if (index >= session.length) index = session.length - 1;
+  flipped = false;
+  renderCard();
+  setStatus(`已将「${card.german}」标记为掌握，以后不会再出现在学习轮次中。`);
+}
+function backToSetup() {
+  $("studyPanel").classList.remove("active");
+  $("setupPanel").style.display = "";
+  $("emptyState").style.display = "block";
+  $("emptyState").textContent = "导入你的德语单词表，然后选择每次学习的数量。每轮随机抽取，不会在同一轮重复。";
+}
+async function importFile(file) {
+  if (!file) return;
+  const ext = file.name.split(".").pop().toLowerCase();
+  try {
+    let rows;
+    if (ext === "xlsx") {
+      if (!window.XLSX) {
+        setStatus("Excel 解析库未加载。请联网后重试，或将表格另存为 CSV 导入。", true);
+        return;
+      }
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, {type:"array"});
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      rows = XLSX.utils.sheet_to_json(sheet, {header:1, defval:""});
+    } else {
+      const text = await file.text();
+      const delimiter = ext === "tsv" ? "\t" : (text.split(/\r?\n/)[0].includes("\t") ? "\t" : (text.split(/\r?\n/)[0].includes(";") && !text.split(/\r?\n/)[0].includes(",") ? ";" : ","));
+      rows = parseDelimited(text.replace(/^\uFEFF/, ""), delimiter);
+    }
+    const imported = rowsToCards(rows);
+    if (!imported.length) {
+      setStatus("没有识别到有效单词。请确认至少有德语和中文两列。", true);
+      return;
+    }
+    const keyOf = c => c.german.toLowerCase()+"\u0000"+c.chinese.toLowerCase();
+    const activeKeys = new Set(deck.map(keyOf));
+    const masteredKeys = new Set(mastered.map(keyOf));
+    let added = 0, marked = 0;
+    for (const card of imported) {
+      const key = keyOf(card);
+      if (card.mastered) {
+        if (!masteredKeys.has(key)) { mastered.push({german:card.german,chinese:card.chinese,example:card.example}); masteredKeys.add(key); marked++; }
+        deck = deck.filter(c => keyOf(c) !== key);
+        activeKeys.delete(key);
+      } else if (!activeKeys.has(key) && !masteredKeys.has(key)) {
+        deck.push({german:card.german,chinese:card.chinese,example:card.example,hard:!!card.hard});
+        activeKeys.add(key); added++;
+      }
+    }
+    saveDeck();
+    setStatus(`已导入到「${activeBook}」：识别 ${imported.length} 个，新增 ${added} 个${marked ? `，恢复已掌握状态 ${marked} 个` : ""}。`);
+    $("fileInput").value = "";
+    $("emptyState").style.display = "none";
+  } catch (e) {
+    console.error(e);
+    setStatus("导入失败。请检查文件格式，或尝试另存为 CSV。", true);
+  }
+}
+function exportBackup() {
+  if (!deck.length && !mastered.length) { setStatus("当前单词本没有可导出的单词。", true); return; }
+  const quote = v => `"${String(v ?? "").replace(/"/g,'""')}"`;
+  const allRows = [
+    ...deck.map(c => [c.german,c.chinese,c.example,"待学习",c.hard ? "是" : "否"]),
+    ...mastered.map(c => [c.german,c.chinese,c.example,"已掌握","否"])
+  ];
+  const csv = "\uFEFF德语,中文,例句,状态,难词\r\n" + allRows.map(row => row.map(quote).join(",")).join("\r\n");
+  const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = "德语单词卡备份.csv"; a.click();
+  URL.revokeObjectURL(url);
+  setStatus("已导出 CSV 备份。");
+}
+
+function toggleHard() {
+  const card = session[index];
+  if (!card) return;
+  const current = deck.find(c => c.german.toLowerCase() === card.german.toLowerCase() && c.chinese.toLowerCase() === card.chinese.toLowerCase());
+  if (!current) return;
+  current.hard = !current.hard;
+  // Keep current session entries in sync, so the button and future repetitions agree.
+  session.forEach(c => {
+    if (c.german.toLowerCase() === current.german.toLowerCase() && c.chinese.toLowerCase() === current.chinese.toLowerCase()) c.hard = current.hard;
+  });
+  saveDeck();
+  renderCard();
+  setStatus(current.hard ? `已将「${current.german}」标记为难词；以后抽取时会更频繁出现。` : `已取消「${current.german}」的难词标记。`);
+}
+function escapeRegExp(value) { return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+function makeBlankExample(card) {
+  const example = card.example || "（这条单词没有例句，请根据中文意思拼写。）";
+  if (!card.example) return example;
+  const re = new RegExp(escapeRegExp(card.german), "gi");
+  const blanked = example.replace(re, "_______");
+  return blanked === example ? `${example}\n\n提示：例句中没有找到原形「${card.german}」，请根据中文意思拼写。` : blanked;
+}
+function startQuiz() {
+  if (!deck.length) return;
+  quizSession = shuffle(deck).slice(0, Math.min(deck.length, selectedAmount()));
+  quizIndex = 0; quizChecked = false;
+  $("setupPanel").style.display = "none";
+  $("studyPanel").classList.remove("active");
+  $("emptyState").style.display = "none";
+  $("quizPanel").classList.add("active");
+  renderQuiz();
+}
+function renderQuiz() {
+  const card = quizSession[quizIndex];
+  if (!card) return;
+  quizChecked = false;
+  $("quizChinese").textContent = card.chinese;
+  $("quizExample").textContent = makeBlankExample(card);
+  $("quizAnswer").value = "";
+  $("quizAnswer").disabled = false;
+  $("quizFeedback").textContent = "";
+  $("quizFeedback").className = "quiz-feedback";
+  $("checkAnswerBtn").disabled = false;
+  $("nextQuizBtn").disabled = true;
+  $("nextQuizBtn").textContent = quizIndex === quizSession.length - 1 ? "完成 ✓" : "下一题 →";
+  $("quizProgress").textContent = `${quizIndex + 1} / ${quizSession.length}`;
+  $("quizProgressBar").style.width = `${((quizIndex + 1) / quizSession.length) * 100}%`;
+  $("quizAnswer").focus();
+}
+function checkQuizAnswer() {
+  if (quizChecked) return;
+  const card = quizSession[quizIndex];
+  if (!card) return;
+  const answer = $("quizAnswer").value.trim().toLocaleLowerCase("de");
+  const correct = card.german.trim().toLocaleLowerCase("de");
+  quizChecked = true;
+  $("quizAnswer").disabled = true;
+  $("checkAnswerBtn").disabled = true;
+  $("nextQuizBtn").disabled = false;
+  const feedback = $("quizFeedback");
+  if (answer === correct) {
+    feedback.textContent = "正确！";
+    feedback.className = "quiz-feedback good";
+  } else {
+    feedback.textContent = `还不正确。答案：${card.german}`;
+    feedback.className = "quiz-feedback bad";
+  }
+}
+function nextQuiz() {
+  if (!quizChecked) return;
+  if (quizIndex < quizSession.length - 1) {
+    quizIndex++;
+    renderQuiz();
+  } else {
+    $("quizPanel").classList.remove("active");
+    $("setupPanel").style.display = "";
+    $("emptyState").style.display = "block";
+    $("emptyState").textContent = `拼写练习完成，共练习 ${quizSession.length} 个单词。可以再开始一轮。`;
+    quizSession = [];
+  }
+}
+function backFromQuiz() {
+  $("quizPanel").classList.remove("active");
+  $("setupPanel").style.display = "";
+  $("emptyState").style.display = "block";
+  $("emptyState").textContent = "导入你的德语单词表，然后选择每次学习的数量。";
+}
+
+$("fileInput").addEventListener("change", e => importFile(e.target.files[0]));
+$("amount").addEventListener("change", () => {$("customWrap").style.display = $("amount").value === "custom" ? "" : "none";});
+$("startBtn").addEventListener("click", startStudy);
+$("flashcard").addEventListener("click", flipCard);
+$("flashcard").addEventListener("keydown", e => {if (e.key === "Enter" || e.key === " ") {e.preventDefault(); flipCard();}});
+$("flipBtn").addEventListener("click", flipCard);
+$("hardBtn").addEventListener("click", toggleHard);
+$("quizStartBtn").addEventListener("click", startQuiz);
+$("quizBackBtn").addEventListener("click", backFromQuiz);
+$("checkAnswerBtn").addEventListener("click", checkQuizAnswer);
+$("nextQuizBtn").addEventListener("click", nextQuiz);
+$("quizAnswer").addEventListener("keydown", e => { if (e.key === "Enter") { if (!quizChecked) checkQuizAnswer(); else nextQuiz(); } });
+$("nextBtn").addEventListener("click", nextCard);
+$("prevBtn").addEventListener("click", prevCard);
+$("backBtn").addEventListener("click", backToSetup);
+$("masteredBtn").addEventListener("click", () => {
+  if (confirm("确定已彻底掌握这个单词？它将从待学习列表移除，以后不会再被抽到。")) markMastered();
+});
+$("exportBtn").addEventListener("click", exportBackup);
+$("clearBtn").addEventListener("click", () => {
+  if (confirm(`确定清空当前单词本「${activeBook}」中的全部单词吗？其他单词本不会受影响。建议先导出备份。`)) {
+    deck = []; mastered = []; session = []; quizSession = []; saveDeck(); setStatus(`「${activeBook}」已清空。`); $("emptyState").style.display = "block"; $("studyPanel").classList.remove("active"); $("quizPanel").classList.remove("active"); $("setupPanel").style.display = "";
+  }
+});
+try { books = JSON.parse(localStorage.getItem(BOOKS_KEY) || "{}"); } catch(e) { books = {}; }
+if (!books || typeof books !== "object" || !Object.keys(books).length) {
+  let oldDeck = [], oldMastered = [];
+  try { oldDeck = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch(e) {}
+  try { oldMastered = JSON.parse(localStorage.getItem(MASTERED_KEY) || "[]"); } catch(e) {}
+  books = {"默认单词本": {deck:oldDeck, mastered:oldMastered}};
+}
+activeBook = Object.keys(books)[0] || "默认单词本";
+deck = Array.isArray(books[activeBook].deck) ? books[activeBook].deck : [];
+mastered = Array.isArray(books[activeBook].mastered) ? books[activeBook].mastered : [];
+updateDeckInfo();
+$("bookSelect").addEventListener("change", e => switchBook(e.target.value));
+$("newBookBtn").addEventListener("click", () => { const name = prompt("新单词本名称："); if (!name || !name.trim()) return; const n = name.trim(); if (books[n]) { alert("这个单词本已经存在。"); return; } books[n] = {deck:[], mastered:[]}; books[activeBook] = {deck, mastered}; localStorage.setItem(BOOKS_KEY, JSON.stringify(books)); switchBook(n); scheduleCloudSave(); setStatus(`已创建单词本「${n}」。`); });
+$("renameBookBtn").addEventListener("click", () => { const name = prompt("请输入新的单词本名称：", activeBook); if (!name || !name.trim() || name.trim() === activeBook) return; const n = name.trim(); if (books[n]) { alert("这个名称已经被使用。"); return; } books[n] = {deck, mastered}; delete books[activeBook]; activeBook = n; saveDeck(); updateBookSelect(); scheduleCloudSave(); setStatus(`单词本已重命名为「${n}」。`); });
+$("deleteBookBtn").addEventListener("click", () => { if (Object.keys(books).length <= 1) { alert("至少保留一个单词本。"); return; } if (!confirm(`确定删除「${activeBook}」及其中的所有单词和学习状态吗？此操作无法撤销。`)) return; delete books[activeBook]; activeBook = Object.keys(books)[0]; deck = books[activeBook].deck || []; mastered = books[activeBook].mastered || []; localStorage.setItem(BOOKS_KEY, JSON.stringify(books)); updateDeckInfo(); scheduleCloudSave(); setStatus(`已删除单词本，当前为「${activeBook}」。`); });
+$("addWordBtn").addEventListener("click", () => { const german = $("newGerman").value.trim(), chinese = $("newChinese").value.trim(), example = $("newExample").value.trim(); if (!german || !chinese) { setStatus("请至少填写德语和中文意思。", true); return; } const key = c => c.german.toLocaleLowerCase("de")+"\u0000"+c.chinese.toLowerCase(); if ([...deck,...mastered].some(c => key(c) === key({german,chinese}))) { setStatus("当前单词本已存在这个词条。", true); return; } deck.push({german,chinese,example,hard:false}); saveDeck(); $("newGerman").value = ""; $("newChinese").value = ""; $("newExample").value = ""; setStatus(`已添加「${german}」到「${activeBook}」。`); });
+initCloudAuth();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</body>
+</html>
