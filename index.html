@@ -51,8 +51,15 @@ footer{font-size:12px;color:var(--muted);line-height:1.6;text-align:center;paddi
 
 .auth-panel{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .auth-copy{flex:1;min-width:180px}.auth-copy strong{display:block;font-size:15px}.auth-copy span{display:block;font-size:13px;color:var(--muted);line-height:1.5;margin-top:5px}
-.auth-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.auth-status{font-size:12px;color:var(--muted);margin-top:8px;min-height:18px}
-@media(max-width:520px){.app{padding:17px 13px calc(24px + env(safe-area-inset-bottom))}header{align-items:flex-start;margin-bottom:20px}.logo{width:38px;height:38px}.brand{gap:9px}h1{font-size:20px}.top-actions button{padding:9px 10px;font-size:12px}.panel{padding:16px;border-radius:17px}.settings{grid-template-columns:1fr 1fr;gap:10px}.flashcard{min-height:280px;padding:24px 17px}.card-example{font-size:15px}.controls button{padding:10px 8px;font-size:13px}}
+.auth-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.book-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin:14px 0 18px}
+.book-card{border:1px solid var(--line);border-radius:16px;padding:15px;background:linear-gradient(145deg,#fff,#fafbf8);cursor:pointer;transition:transform .15s,border-color .15s,box-shadow .15s;min-width:0}
+.book-card:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(26,36,29,.08)}
+.book-card.active{border:2px solid var(--accent);background:var(--accent-soft);padding:14px}
+.book-card h3{margin:0 0 7px;font-size:15px;overflow-wrap:anywhere}.book-meta{font-size:12px;color:var(--muted);line-height:1.5}.book-card button{margin-top:11px;width:100%;font-size:12px;padding:8px}
+.speak-btn{margin-top:14px}.quiz-answer-slots{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.quiz-answer-slots input{min-width:64px;max-width:100%;width:calc(var(--chars,6)*1ch + 26px);flex:1 1 auto;border:1px solid var(--line);border-radius:10px;padding:11px 8px;font-size:18px;text-align:center}.quiz-hints{display:flex;gap:8px;flex-wrap:wrap}.quiz-hints span{flex:1 1 auto;min-width:64px;text-align:center;font-size:13px;color:var(--muted)}
+.quiz-example{display:none!important}.auth-status{font-size:12px;color:var(--muted);margin-top:8px;min-height:18px}
+@media(max-width:520px){.book-grid{grid-template-columns:1fr 1fr;gap:8px}.book-card{padding:12px}.book-card.active{padding:11px}.book-card h3{font-size:14px}.quiz-answer-slots input{font-size:16px}.app{padding:17px 13px calc(24px + env(safe-area-inset-bottom))}header{align-items:flex-start;margin-bottom:20px}.logo{width:38px;height:38px}.brand{gap:9px}h1{font-size:20px}.top-actions button{padding:9px 10px;font-size:12px}.panel{padding:16px;border-radius:17px}.settings{grid-template-columns:1fr 1fr;gap:10px}.flashcard{min-height:280px;padding:24px 17px}.card-example{font-size:15px}.controls button{padding:10px 8px;font-size:13px}}
 </style>
 </head>
 <body>
@@ -82,9 +89,10 @@ footer{font-size:12px;color:var(--muted);line-height:1.6;text-align:center;paddi
 <section class="panel" id="setupPanel">
   <div class="panel-title">单词库</div>
   <div class="settings" style="margin-bottom:14px">
-    <div class="field"><label for="bookSelect">当前单词本</label><select id="bookSelect"></select></div>
+    <div class="field" style="display:none"><label for="bookSelect">当前单词本</label><select id="bookSelect"></select></div>
     <div class="field"><label>单词本管理</label><div style="display:flex;gap:6px"><button id="newBookBtn" type="button">＋ 新建</button><button id="renameBookBtn" type="button">重命名</button><button id="deleteBookBtn" type="button">删除</button></div></div>
   </div>
+  <div class="book-grid" id="bookGrid" aria-label="单词本列表"></div>
   <details style="margin:12px 0"><summary style="cursor:pointer;font-weight:650">＋ 单个添加单词</summary>
     <div class="settings" style="margin-top:12px">
       <div class="field"><label for="newGerman">德语</label><input id="newGerman" placeholder="z. B. allerdings"></div>
@@ -121,6 +129,7 @@ footer{font-size:12px;color:var(--muted);line-height:1.6;text-align:center;paddi
     <button class="primary flip" id="flipBtn">显示德语 ↻</button>
     <button id="nextBtn">下一个 →</button>
   </div>
+  <div class="controls"><button id="speakBtn" class="speak-btn">🔊 朗读德语</button></div>
   <div class="controls"><button id="hardBtn" class="hard-btn">★ 标记为难词</button><button id="masteredBtn">✓ 已彻底掌握</button></div>
   <div class="stats"><span class="pill" id="sessionCount">本轮 20 个</span><span class="pill">难词会更频繁出现</span></div>
 </section>
@@ -131,9 +140,9 @@ footer{font-size:12px;color:var(--muted);line-height:1.6;text-align:center;paddi
   <div class="card-hint">根据中文意思拼写德语</div>
   <div class="quiz-prompt" id="quizChinese"></div>
   <div class="quiz-example" id="quizExample"></div>
-  <input class="quiz-input" id="quizAnswer" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="输入德语单词">
+  <div class="quiz-answer-slots" id="quizAnswerSlots"></div>
   <div class="quiz-feedback" id="quizFeedback" role="status"></div>
-  <div class="controls"><button id="checkAnswerBtn" class="primary">检查答案</button><button id="nextQuizBtn" disabled>下一题 →</button></div>
+  <div class="controls"><button id="speakQuizBtn">🔊 听发音</button><button id="checkAnswerBtn" class="primary">检查答案</button><button id="nextQuizBtn">跳过 / 下一题 →</button></div>
 </section>
 <div class="empty" id="emptyState">导入你的德语单词表，然后选择每次学习的数量。<br>每轮随机抽取；标记为难词后会更频繁出现。</div>
 <footer>免费使用 · 可在本设备保存，也可登录 Google 启用云同步。<br>重要单词请定期点击「导出备份」。</footer>
@@ -156,6 +165,7 @@ let flipped = false;
 let quizSession = [];
 let quizIndex = 0;
 let quizChecked = false;
+let quizRevealed = false;
 
 const $ = id => document.getElementById(id);
 
@@ -429,11 +439,12 @@ function switchBook(name) {
   activeBook = name;
   deck = Array.isArray(books[name].deck) ? books[name].deck : [];
   mastered = Array.isArray(books[name].mastered) ? books[name].mastered : [];
-  updateBookSelect(); saveDeck();
+  updateBookSelect(); saveDeck(); renderBookCards();
   $("emptyState").textContent = `当前单词本：${activeBook}。导入单词表或开始学习。`;
 }
 function updateDeckInfo() {
   updateBookSelect();
+  renderBookCards();
   $("deckTitle").textContent = deck.length ? `待学习 ${deck.length} 个单词` : "还没有待学习的单词";
   $("deckSub").textContent = mastered.length ? `已标记掌握 ${mastered.length} 个；这些词不会再出现在学习轮次中。` : (deck.length ? "可以继续导入新表格；相同德语和中文会自动跳过。" : "支持 CSV 和 Excel（.xlsx）。数据保存在当前浏览器中。");
   $("countLabel").textContent = `待学习 ${deck.length} 个单词`;
@@ -598,18 +609,20 @@ function toggleHard() {
   renderCard();
   setStatus(current.hard ? `已将「${current.german}」标记为难词；以后抽取时会更频繁出现。` : `已取消「${current.german}」的难词标记。`);
 }
-function escapeRegExp(value) { return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
-function makeBlankExample(card) {
-  const example = card.example || "（这条单词没有例句，请根据中文意思拼写。）";
-  if (!card.example) return example;
-  const re = new RegExp(escapeRegExp(card.german), "gi");
-  const blanked = example.replace(re, "_______");
-  return blanked === example ? `${example}\n\n提示：例句中没有找到原形「${card.german}」，请根据中文意思拼写。` : blanked;
+function speakGerman(text) {
+  if (!("speechSynthesis" in window)) { setStatus("此浏览器不支持语音朗读。", true); return; }
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(String(text || "").trim());
+  utterance.lang = "de-DE"; utterance.rate = 0.88;
+  const voices = window.speechSynthesis.getVoices();
+  const germanVoice = voices.find(v => /^de(-|_)/i.test(v.lang));
+  if (germanVoice) utterance.voice = germanVoice;
+  window.speechSynthesis.speak(utterance);
 }
 function startQuiz() {
   if (!deck.length) return;
   quizSession = shuffle(deck).slice(0, Math.min(deck.length, selectedAmount()));
-  quizIndex = 0; quizChecked = false;
+  quizIndex = 0; quizChecked = false; quizRevealed = false;
   $("setupPanel").style.display = "none";
   $("studyPanel").classList.remove("active");
   $("emptyState").style.display = "none";
@@ -617,52 +630,44 @@ function startQuiz() {
   renderQuiz();
 }
 function renderQuiz() {
-  const card = quizSession[quizIndex];
-  if (!card) return;
-  quizChecked = false;
+  const card = quizSession[quizIndex]; if (!card) return;
+  quizChecked = false; quizRevealed = false;
   $("quizChinese").textContent = card.chinese;
-  $("quizExample").textContent = makeBlankExample(card);
-  $("quizAnswer").value = "";
-  $("quizAnswer").disabled = false;
-  $("quizFeedback").textContent = "";
-  $("quizFeedback").className = "quiz-feedback";
-  $("checkAnswerBtn").disabled = false;
-  $("nextQuizBtn").disabled = true;
+  $("quizExample").textContent = "";
+  const words = String(card.german).trim().split(/\s+/).filter(Boolean);
+  const slots = $("quizAnswerSlots"); slots.innerHTML = "";
+  words.forEach((word, i) => {
+    const wrap = document.createElement("div"); wrap.style.flex = "1 1 auto"; wrap.style.minWidth = "64px";
+    const hint = document.createElement("div"); hint.className = "quiz-hints";
+    const label = document.createElement("span"); label.textContent = `${i+1}. ${word[0] || ""}…`; hint.appendChild(label);
+    const input = document.createElement("input"); input.type = "text"; input.autocomplete = "off"; input.autocapitalize = "off"; input.spellcheck = false; input.dataset.index = String(i); input.setAttribute("aria-label", `第 ${i+1} 个词，首字母 ${word[0] || ""}`); input.placeholder = word[0] || "…"; input.style.setProperty("--chars", String(Math.max(4, Math.min(14, word.length))));
+    input.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); nextQuiz(); } });
+    wrap.appendChild(hint); wrap.appendChild(input); slots.appendChild(wrap);
+  });
+  $("quizFeedback").textContent = ""; $("quizFeedback").className = "quiz-feedback";
+  $("checkAnswerBtn").disabled = false; $("nextQuizBtn").disabled = false;
   $("nextQuizBtn").textContent = quizIndex === quizSession.length - 1 ? "完成 ✓" : "下一题 →";
   $("quizProgress").textContent = `${quizIndex + 1} / ${quizSession.length}`;
   $("quizProgressBar").style.width = `${((quizIndex + 1) / quizSession.length) * 100}%`;
-  $("quizAnswer").focus();
+  const first = slots.querySelector("input"); if (first) first.focus();
 }
 function checkQuizAnswer() {
   if (quizChecked) return;
-  const card = quizSession[quizIndex];
-  if (!card) return;
-  const answer = $("quizAnswer").value.trim().toLocaleLowerCase("de");
-  const correct = card.german.trim().toLocaleLowerCase("de");
-  quizChecked = true;
-  $("quizAnswer").disabled = true;
-  $("checkAnswerBtn").disabled = true;
-  $("nextQuizBtn").disabled = false;
+  const card = quizSession[quizIndex]; if (!card) return;
+  const expected = String(card.german).trim().split(/\s+/).filter(Boolean);
+  const inputs = [...$("quizAnswerSlots").querySelectorAll("input")];
   const feedback = $("quizFeedback");
-  if (answer === correct) {
-    feedback.textContent = "正确！";
-    feedback.className = "quiz-feedback good";
-  } else {
-    feedback.textContent = `还不正确。答案：${card.german}`;
-    feedback.className = "quiz-feedback bad";
-  }
+  const correct = inputs.length === expected.length && inputs.every((input, i) => input.value.trim().toLocaleLowerCase("de") === expected[i].toLocaleLowerCase("de"));
+  quizChecked = true;
+  if (correct) { feedback.textContent = "正确！"; feedback.className = "quiz-feedback good"; }
+  else { feedback.textContent = `答案：${card.german}`; feedback.className = "quiz-feedback bad"; }
+  $("checkAnswerBtn").disabled = true;
 }
 function nextQuiz() {
-  if (!quizChecked) return;
-  if (quizIndex < quizSession.length - 1) {
-    quizIndex++;
-    renderQuiz();
-  } else {
-    $("quizPanel").classList.remove("active");
-    $("setupPanel").style.display = "";
-    $("emptyState").style.display = "block";
-    $("emptyState").textContent = `拼写练习完成，共练习 ${quizSession.length} 个单词。可以再开始一轮。`;
-    quizSession = [];
+  if (quizIndex < quizSession.length - 1) { quizIndex++; renderQuiz(); }
+  else {
+    $("quizPanel").classList.remove("active"); $("setupPanel").style.display = ""; $("emptyState").style.display = "block";
+    $("emptyState").textContent = `拼写练习完成，共练习 ${quizSession.length} 个单词或短语。可以再开始一轮。`; quizSession = [];
   }
 }
 function backFromQuiz() {
@@ -682,8 +687,9 @@ $("hardBtn").addEventListener("click", toggleHard);
 $("quizStartBtn").addEventListener("click", startQuiz);
 $("quizBackBtn").addEventListener("click", backFromQuiz);
 $("checkAnswerBtn").addEventListener("click", checkQuizAnswer);
+$("speakBtn").addEventListener("click", () => { const card = session[index]; if (card) speakGerman(card.german); });
+$("speakQuizBtn").addEventListener("click", () => { const card = quizSession[quizIndex]; if (card) speakGerman(card.german); });
 $("nextQuizBtn").addEventListener("click", nextQuiz);
-$("quizAnswer").addEventListener("keydown", e => { if (e.key === "Enter") { if (!quizChecked) checkQuizAnswer(); else nextQuiz(); } });
 $("nextBtn").addEventListener("click", nextCard);
 $("prevBtn").addEventListener("click", prevCard);
 $("backBtn").addEventListener("click", backToSetup);
@@ -707,6 +713,7 @@ activeBook = Object.keys(books)[0] || "默认单词本";
 deck = Array.isArray(books[activeBook].deck) ? books[activeBook].deck : [];
 mastered = Array.isArray(books[activeBook].mastered) ? books[activeBook].mastered : [];
 updateDeckInfo();
+renderBookCards();
 $("bookSelect").addEventListener("change", e => switchBook(e.target.value));
 $("newBookBtn").addEventListener("click", () => { const name = prompt("新单词本名称："); if (!name || !name.trim()) return; const n = name.trim(); if (books[n]) { alert("这个单词本已经存在。"); return; } books[n] = {deck:[], mastered:[]}; books[activeBook] = {deck, mastered}; localStorage.setItem(BOOKS_KEY, JSON.stringify(books)); switchBook(n); scheduleCloudSave(); setStatus(`已创建单词本「${n}」。`); });
 $("renameBookBtn").addEventListener("click", () => { const name = prompt("请输入新的单词本名称：", activeBook); if (!name || !name.trim() || name.trim() === activeBook) return; const n = name.trim(); if (books[n]) { alert("这个名称已经被使用。"); return; } books[n] = {deck, mastered}; delete books[activeBook]; activeBook = n; saveDeck(); updateBookSelect(); scheduleCloudSave(); setStatus(`单词本已重命名为「${n}」。`); });
