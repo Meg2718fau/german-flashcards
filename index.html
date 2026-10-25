@@ -433,6 +433,49 @@ function updateBookSelect() {
   Object.keys(books).forEach(name => { const opt = document.createElement("option"); opt.value = name; opt.textContent = name; select.appendChild(opt); });
   select.value = activeBook;
 }
+
+function renderBookCards() {
+  const grid = $("bookGrid");
+  if (!grid) return;
+  grid.replaceChildren();
+  Object.entries(books || {}).forEach(([name, book]) => {
+    const card = document.createElement("div");
+    card.className = "book-card" + (name === activeBook ? " active" : "");
+    card.tabIndex = 0;
+    card.setAttribute("role", "button");
+    card.setAttribute("aria-pressed", name === activeBook ? "true" : "false");
+
+    const title = document.createElement("h3");
+    title.textContent = name;
+    const meta = document.createElement("div");
+    meta.className = "book-meta";
+    const pending = Array.isArray(book?.deck) ? book.deck.length : 0;
+    const masteredCount = Array.isArray(book?.mastered) ? book.mastered.length : 0;
+    meta.textContent = `待学习 ${pending} 个 · 已掌握 ${masteredCount} 个`;
+
+    card.append(title, meta);
+    const selectButton = document.createElement("button");
+    selectButton.type = "button";
+    selectButton.textContent = name === activeBook ? "当前单词本" : "切换到此单词本";
+    selectButton.disabled = name === activeBook;
+    selectButton.addEventListener("click", event => {
+      event.stopPropagation();
+      switchBook(name);
+    });
+    card.appendChild(selectButton);
+    card.addEventListener("click", () => {
+      if (name !== activeBook) switchBook(name);
+    });
+    card.addEventListener("keydown", event => {
+      if ((event.key === "Enter" || event.key === " ") && name !== activeBook) {
+        event.preventDefault();
+        switchBook(name);
+      }
+    });
+    grid.appendChild(card);
+  });
+}
+
 function switchBook(name) {
   if (!books[name]) return;
   books[activeBook] = {deck, mastered};
